@@ -140,7 +140,7 @@ export default function AmtEasy() {
         .amt-lang-select { position: relative; }
         .amt-lang-btn { background: #1e2a28; border: 1px solid #2e3f3c; border-radius: 8px; color: #d6c9b0; font-family: 'DM Sans', sans-serif; font-size: 13px; padding: 10px 16px; cursor: pointer; display: flex; align-items: center; gap: 8px; transition: border-color 0.2s; white-space: nowrap; }
         .amt-lang-btn:hover { border-color: #4a6f6a; }
-        .amt-lang-dropdown { position: absolute; top: calc(100% + 6px); left: 0; background: #243330; border: 1px solid #2e3f3c; border-radius: 8px; overflow-y: auto; max-height: 280px; z-index: 200; min-width: 160px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
+        .amt-lang-dropdown { position: absolute; bottom: calc(100% + 6px); top: auto; left: 0; background: #243330; border: 1px solid #2e3f3c; border-radius: 8px; overflow-y: auto; max-height: 280px; z-index: 200; min-width: 160px; box-shadow: 0 8px 32px rgba(0,0,0,0.5); }
         .amt-lang-option { padding: 10px 16px; cursor: pointer; font-size: 13px; display: flex; align-items: center; gap: 10px; transition: background 0.15s; }
         .amt-lang-option:hover { background: #2e3f3c; }
         .amt-lang-option.active { color: #9e2b1a; }
