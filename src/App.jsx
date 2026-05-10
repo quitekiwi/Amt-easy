@@ -432,6 +432,10 @@ export default function AmtEasy() {
         .amt-upload-btn:hover { border-color: #7d2015; color: #7d2015; background: rgba(158,43,26,0.06); }
         .amt-upload-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .amt-upload-divider { font-size: 11px; color: #3a4f4c; }
+        .amt-scan-tips { margin-top: 10px; padding: 12px 14px; background: #1e2a28; border-radius: 8px; border-left: 2px solid #2e3f3c; }
+        .amt-scan-tips-title { font-size: 10px; letter-spacing: 1.5px; text-transform: uppercase; color: #4a5f5c; font-weight: 500; margin-bottom: 8px; }
+        .amt-scan-tip { font-size: 11px; color: #4a5f5c; line-height: 1.7; }
+        .amt-scan-tip strong { color: #8a9a97; font-weight: 500; }
         .amt-examples { display: flex; gap: 8px; flex-wrap: wrap; }
         .amt-example-btn { background: transparent; border: 1px solid #2e3f3c; border-radius: 20px; color: #4a5f5c; font-family: 'DM Sans', sans-serif; font-size: 11px; padding: 5px 12px; cursor: pointer; transition: all 0.2s; letter-spacing: 0.3px; }
         .amt-example-btn:hover { border-color: #4a6f6a; color: #8a9a97; }
@@ -568,6 +572,12 @@ export default function AmtEasy() {
               ))}
             </div>
           </div>
+          <div className="amt-scan-tips">
+            <p className="amt-scan-tips-title">No PDF? Scan your document first</p>
+            <p className="amt-scan-tip"><strong>iPhone:</strong> Open Notes &#8594; tap the camera icon &#8594; Scan Documents &#8594; save to Files &#8594; upload here.</p>
+            <p className="amt-scan-tip"><strong>Android:</strong> Open Google Drive &#8594; tap + &#8594; Scan &#8594; save as PDF &#8594; upload here.</p>
+          </div>
+
 
           {pdfLoading && (
             <div className="amt-pdf-loading">
