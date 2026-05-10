@@ -3,28 +3,28 @@ import { useState, useEffect } from "react";
 const LANGUAGES = [
   { code: "English", label: "English" },
   { code: "German", label: "Deutsch" },
-  { code: "Arabic", label: "العربية" },
-  { code: "Turkish", label: "Türkçe" },
-  { code: "Ukrainian", label: "Українська" },
-  { code: "Russian", label: "Русский" },
-  { code: "Romanian", label: "Română" },
+  { code: "Arabic", label: "\u0627\u0644\u0639\u0631\u0628\u064a\u0629" },
+  { code: "Turkish", label: "T\u00fcrk\u00e7e" },
+  { code: "Ukrainian", label: "\u0423\u043a\u0440\u0430\u0457\u043d\u0441\u044c\u043a\u0430" },
+  { code: "Russian", label: "\u0420\u0443\u0441\u0441\u043a\u0438\u0439" },
+  { code: "Romanian", label: "Rom\u00e2n\u0103" },
   { code: "Polish", label: "Polski" },
-  { code: "French", label: "Français" },
-  { code: "Spanish", label: "Español" },
+  { code: "French", label: "Fran\u00e7ais" },
+  { code: "Spanish", label: "Espa\u00f1ol" },
   { code: "Italian", label: "Italiano" },
-  { code: "Portuguese", label: "Português" },
-  { code: "Persian", label: "فارسی" },
-  { code: "Kurdish (Kurmanji)", label: "Kurdî" },
-  { code: "Serbian", label: "Српски" },
+  { code: "Portuguese", label: "Portugu\u00eas" },
+  { code: "Persian", label: "\u0641\u0627\u0631\u0633\u06cc" },
+  { code: "Kurdish (Kurmanji)", label: "Kurd\u00ee" },
+  { code: "Serbian", label: "\u0421\u0440\u043f\u0441\u043a\u0438" },
   { code: "Croatian", label: "Hrvatski" },
   { code: "Bosnian", label: "Bosanski" },
-  { code: "Bulgarian", label: "Български" },
-  { code: "Greek", label: "Ελληνικά" },
-  { code: "Vietnamese", label: "Tiếng Việt" },
-  { code: "Hindi", label: "हिन्दी" },
+  { code: "Bulgarian", label: "\u0411\u044a\u043b\u0433\u0430\u0440\u0441\u043a\u0438" },
+  { code: "Greek", label: "\u0395\u03bb\u03bb\u03b7\u03bd\u03b9\u03ba\u03ac" },
+  { code: "Vietnamese", label: "Ti\u1ebfng Vi\u1ec7t" },
+  { code: "Hindi", label: "\u0939\u093f\u0928\u094d\u0926\u0940" },
   { code: "Somali", label: "Soomaali" },
-  { code: "Amharic", label: "አማርኛ" },
-  { code: "Tigrinya", label: "ትግርኛ" },
+  { code: "Amharic", label: "\u12�\u121b\u122d\u129b" },
+  { code: "Tigrinya", label: "\u1275\u130d\u122d\u129b" },
   { code: "Swedish", label: "Svenska" },
 ];
 
@@ -37,6 +37,203 @@ const EXAMPLES = [
 const CHAR_LIMIT = 3000;
 const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
+function savePDF(result) {
+  const { jsPDF } = window.jspdf;
+  const doc = new jsPDF({ unit: "mm", format: "a4" });
+
+  const red = [158, 43, 26];
+  const dark = [30, 42, 40];
+  const mid = [90, 110, 105];
+  const light = [214, 201, 176];
+  const pageW = 210;
+  const margin = 20;
+  const contentW = pageW - margin * 2;
+  let y = 0;
+
+  // Header bar
+  doc.setFillColor(...dark);
+  doc.rect(0, 0, pageW, 28, "F");
+
+  // Logo
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(16);
+  doc.setTextColor(...light);
+  doc.text("Amt-Easy", margin, 17);
+  doc.setFillColor(...red);
+  doc.circle(margin + doc.getTextWidth("Amt-Easy") + 3, 15, 1.5, "F");
+
+  // Date
+  doc.setFont("helvetica", "normal");
+  doc.setFontSize(8);
+  doc.setTextColor(...mid);
+  doc.text(new Date().toLocaleDateString("en-GB", { day: "2-digit", month: "long", year: "numeric" }), pageW - margin, 17, { align: "right" });
+
+  y = 40;
+
+  // Document type
+  doc.setFont("helvetica", "bold");
+  doc.setFontSize(18);
+  doc.setTextColor(...dark);
+  doc.text(result.document_type || "Document Analysis", margin, y);
+  y += 7;
+
+  // Urgency pill
+  if (result.urgency) {
+    const urgencyColors = { high: [158, 43, 26], medium: [138, 108, 66], low: [74, 122, 106] };
+    const urgencyLabels = { high: "URGENT", medium: "MODERATE", low: "LOW PRIORITY" };
+    const col = urgencyColors[result.urgency] || mid;
+    doc.setFillColor(...col);
+    doc.roundedRect(margin, y, 36, 7, 2, 2, "F");
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(7);
+    doc.setTextColor(255, 255, 255);
+    doc.text(urgencyLabels[result.urgency] || result.urgency.toUpperCase(), margin + 18, y + 4.8, { align: "center" });
+    y += 14;
+  }
+
+  // Summary block
+  if (result.summary) {
+    const summaryLines = doc.splitTextToSize(result.summary, contentW - 10);
+    const summaryH = summaryLines.length * 5.5 + 8;
+    doc.setFillColor(245, 240, 232);
+    doc.rect(margin, y, contentW, summaryH, "F");
+    doc.setFillColor(...red);
+    doc.rect(margin, y, 2, summaryH, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(10);
+    doc.setTextColor(60, 60, 60);
+    doc.text(summaryLines, margin + 8, y + 7);
+    y += summaryH + 8;
+  }
+
+  const sectionTitle = (title) => {
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(8);
+    doc.setTextColor(...mid);
+    doc.text(title.toUpperCase(), margin, y);
+    doc.setDrawColor(...mid);
+    doc.setLineWidth(0.3);
+    doc.line(margin, y + 2, margin + contentW, y + 2);
+    y += 8;
+  };
+
+  const checkPageBreak = (needed) => {
+    if (y + (needed || 20) > 270) { doc.addPage(); y = 20; }
+  };
+
+  // Deadlines
+  if (result.deadlines && result.deadlines.length > 0) {
+    checkPageBreak(20);
+    sectionTitle("Deadlines");
+    result.deadlines.forEach((d) => {
+      checkPageBreak(14);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(...red);
+      doc.text(d.date || "No date", margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60, 60, 60);
+      const descLines = doc.splitTextToSize(d.description || "", contentW - 35);
+      doc.text(descLines, margin + 32, y);
+      y += descLines.length * 5.5 + 3;
+    });
+    y += 4;
+  }
+
+  // Action items
+  if (result.action_items && result.action_items.length > 0) {
+    checkPageBreak(20);
+    sectionTitle("What You Need To Do");
+    result.action_items.forEach((item) => {
+      checkPageBreak(10);
+      doc.setFillColor(...red);
+      doc.circle(margin + 2, y - 1.5, 1.2, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      const lines = doc.splitTextToSize(item, contentW - 10);
+      doc.text(lines, margin + 7, y);
+      y += lines.length * 5.5 + 2;
+    });
+    y += 4;
+  }
+
+  // Documents to bring
+  if (result.documents_to_bring && result.documents_to_bring.length > 0) {
+    checkPageBreak(20);
+    sectionTitle("Documents To Bring");
+    result.documents_to_bring.forEach((docItem) => {
+      checkPageBreak(10);
+      doc.setFillColor(...red);
+      doc.circle(margin + 2, y - 1.5, 1.2, "F");
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(10);
+      doc.setTextColor(60, 60, 60);
+      const lines = doc.splitTextToSize(docItem, contentW - 10);
+      doc.text(lines, margin + 7, y);
+      y += lines.length * 5.5 + 2;
+    });
+    y += 4;
+  }
+
+  // Office info
+  if (result.office_info && Object.values(result.office_info).some(Boolean)) {
+    checkPageBreak(30);
+    sectionTitle("Appointment Details");
+    [
+      { label: "Office", value: result.office_info.name },
+      { label: "Address", value: result.office_info.address },
+      { label: "Room", value: result.office_info.room },
+      { label: "Time", value: result.office_info.time },
+    ].filter((f) => f.value).forEach((f) => {
+      checkPageBreak(10);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(9);
+      doc.setTextColor(...mid);
+      doc.text(f.label.toUpperCase() + ":", margin, y);
+      doc.setFont("helvetica", "normal");
+      doc.setTextColor(60, 60, 60);
+      doc.text(f.value, margin + 28, y);
+      y += 7;
+    });
+    y += 4;
+  }
+
+  // Important numbers
+  if (result.important_numbers && result.important_numbers.length > 0) {
+    checkPageBreak(20);
+    sectionTitle("Important Reference Numbers");
+    result.important_numbers.forEach((n) => {
+      checkPageBreak(10);
+      doc.setFont("helvetica", "normal");
+      doc.setFontSize(9);
+      doc.setTextColor(...mid);
+      doc.text(n.label, margin, y);
+      doc.setFont("helvetica", "bold");
+      doc.setFontSize(10);
+      doc.setTextColor(...dark);
+      doc.text(n.value, pageW - margin, y, { align: "right" });
+      y += 7;
+    });
+    y += 4;
+  }
+
+  // Footer on every page
+  const totalPages = doc.getNumberOfPages();
+  for (let i = 1; i <= totalPages; i++) {
+    doc.setPage(i);
+    doc.setFillColor(...dark);
+    doc.rect(0, 285, pageW, 12, "F");
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(7);
+    doc.setTextColor(...mid);
+    doc.text("Amt-Easy \u2014 Educational tool only. Not legal advice (Rechtsberatung). Always verify with the relevant authority.", margin, 291);
+    doc.text("Page " + i + " of " + totalPages, pageW - margin, 291, { align: "right" });
+  }
+
+  doc.save("amt-easy-analysis.pdf");
+}
+
 export default function AmtEasy() {
   const [input, setInput] = useState("");
   const [language, setLanguage] = useState("English");
@@ -44,6 +241,8 @@ export default function AmtEasy() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [langOpen, setLangOpen] = useState(false);
+  const [privacyOpen, setPrivacyOpen] = useState(false);
+  const [jspdfReady, setJspdfReady] = useState(false);
 
   const selectedLang = LANGUAGES.find((l) => l.code === language);
   const charsLeft = CHAR_LIMIT - input.length;
@@ -62,6 +261,13 @@ export default function AmtEasy() {
     }
     return () => { document.body.style.overflow = ""; };
   }, [langOpen]);
+
+  useEffect(() => {
+    const script = document.createElement("script");
+    script.src = "https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js";
+    script.onload = () => setJspdfReady(true);
+    document.head.appendChild(script);
+  }, []);
 
   const analyze = async () => {
     if (!input.trim() || overLimit) return;
@@ -138,11 +344,23 @@ export default function AmtEasy() {
         .amt-title { font-family: 'DM Serif Display', serif; font-size: clamp(32px, 5vw, 48px); line-height: 1.1; color: #d6c9b0; margin-bottom: 16px; letter-spacing: -1px; }
         .amt-title em { font-style: italic; color: #9e2b1a; }
         .amt-subtitle { font-size: 15px; color: #8a7a62; line-height: 1.6; font-weight: 300; max-width: 520px; }
-        .amt-about { max-width: 760px; margin: 0 auto; padding: 0 40px 48px; }
+        .amt-about { max-width: 760px; margin: 0 auto; padding: 0 40px 16px; }
         .amt-about-card { background: #243330; border: 1px solid #2e3f3c; border-radius: 12px; padding: 28px 32px; }
         .amt-about-title { font-family: 'DM Serif Display', serif; font-size: 18px; color: #d6c9b0; margin-bottom: 12px; }
         .amt-about-text { font-size: 13px; color: #8a7a62; line-height: 1.8; font-weight: 300; margin-bottom: 16px; }
         .amt-about-legal { font-size: 11px; color: #4a5f5c; line-height: 1.7; padding-top: 16px; border-top: 1px solid #2e3f3c; }
+        .amt-privacy-wrap { max-width: 760px; margin: 0 auto; padding: 0 40px 16px; }
+        .amt-privacy-card { background: #243330; border: 1px solid #2e3f3c; border-radius: 12px; overflow: hidden; }
+        .amt-privacy-header { display: flex; align-items: center; justify-content: space-between; padding: 16px 24px; cursor: pointer; transition: background 0.2s; user-select: none; }
+        .amt-privacy-header:hover { background: #2a3d3a; }
+        .amt-privacy-header-left { display: flex; align-items: center; gap: 10px; }
+        .amt-privacy-shield { width: 18px; height: 18px; color: #9e2b1a; flex-shrink: 0; }
+        .amt-privacy-label { font-size: 11px; font-weight: 600; letter-spacing: 2px; text-transform: uppercase; color: #8a7a62; }
+        .amt-privacy-chevron { font-size: 10px; color: #4a5f5c; transition: transform 0.25s; display: inline-block; }
+        .amt-privacy-chevron.open { transform: rotate(180deg); }
+        .amt-privacy-body { padding: 0 24px 20px; border-top: 1px solid #2e3f3c; }
+        .amt-privacy-body p { font-size: 12px; color: #6a7a77; line-height: 1.8; font-weight: 300; margin-top: 14px; }
+        .amt-privacy-body strong { color: #8a9a97; font-weight: 500; }
         .amt-main { max-width: 760px; margin: 0 auto; padding: 0 40px 80px; }
         .amt-card { background: #243330; border: 1px solid #2e3f3c; border-radius: 12px; padding: 28px; margin-bottom: 16px; }
         .amt-card-label { font-size: 10px; letter-spacing: 2.5px; text-transform: uppercase; color: #4a5f5c; font-weight: 500; margin-bottom: 14px; }
@@ -190,8 +408,11 @@ export default function AmtEasy() {
         .amt-number-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #1e2a28; border-radius: 6px; margin-bottom: 6px; }
         .amt-number-label { font-size: 12px; color: #4a5f5c; font-weight: 400; }
         .amt-number-value { font-size: 13px; color: #d6c9b0; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0.5px; }
+        .amt-save-btn { width: 100%; margin-top: 24px; padding: 13px; background: transparent; border: 1px solid #2e3f3c; border-radius: 8px; color: #8a7a62; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.3px; }
+        .amt-save-btn:hover:not(:disabled) { border-color: #9e2b1a; color: #d6c9b0; }
+        .amt-save-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .amt-error { color: #9e2b1a; font-size: 13px; padding: 16px; text-align: center; }
-        @media (max-width: 600px) { .amt-header { padding: 18px 20px; } .amt-hero { padding: 40px 20px 32px; } .amt-about { padding: 0 20px 32px; } .amt-main { padding: 0 20px 60px; } .amt-office-grid { grid-template-columns: 1fr; } .amt-controls { flex-direction: column; } .amt-analyze-btn { width: 100%; } }
+        @media (max-width: 600px) { .amt-header { padding: 18px 20px; } .amt-hero { padding: 40px 20px 32px; } .amt-about { padding: 0 20px 16px; } .amt-privacy-wrap { padding: 0 20px 16px; } .amt-main { padding: 0 20px 60px; } .amt-office-grid { grid-template-columns: 1fr; } .amt-controls { flex-direction: column; } .amt-analyze-btn { width: 100%; } }
       `}</style>
 
       <header className="amt-header">
@@ -214,6 +435,28 @@ export default function AmtEasy() {
           <p className="amt-about-text">German bureaucratic language — known as Beamtendeutsch — is notoriously dense, even for native speakers. For international residents, a single letter from the Auslaenderbehorde, Finanzamt, or Einwohnermeldeamt can feel impossible to decode.</p>
           <p className="amt-about-text">Amt-Easy uses AI to instantly translate these documents into plain language — giving you a clear summary, your deadlines, what you need to bring, and who to contact. Available in 25 languages.</p>
           <p className="amt-about-legal">Legal notice: Amt-Easy is an educational tool only. The summaries and interpretations provided are generated by artificial intelligence and are intended to help you understand documents — they do not constitute legal advice (Rechtsberatung) or replace consultation with a qualified legal professional. Always verify important information directly with the relevant authority before taking action. The creators of Amt-Easy accept no liability for decisions made based on the output of this tool.</p>
+        </div>
+      </div>
+
+      <div className="amt-privacy-wrap">
+        <div className="amt-privacy-card">
+          <div className="amt-privacy-header" onClick={() => setPrivacyOpen(!privacyOpen)}>
+            <div className="amt-privacy-header-left">
+              <svg className="amt-privacy-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span className="amt-privacy-label">Privacy &amp; Data Notice</span>
+            </div>
+            <span className={"amt-privacy-chevron" + (privacyOpen ? " open" : "")}>&#9660;</span>
+          </div>
+          {privacyOpen && (
+            <div className="amt-privacy-body">
+              <p><strong>What we collect:</strong> Nothing. Amt-Easy does not store, collect, or retain any documents or personal data you submit. No accounts, no cookies, no analytics.</p>
+              <p><strong>How your document is processed:</strong> The text you paste is sent in real time to Google Gemini AI (Google LLC) solely to generate your summary. Amt-Easy never sees or saves this content after your session ends. When you close the tab, it is gone.</p>
+              <p><strong>What Google sees:</strong> Your document text is transmitted to Google&apos;s servers for AI processing. Google&apos;s Privacy Policy applies to that step. We recommend removing or covering any information not necessary for understanding the document — such as your <strong>full passport number, national ID number, IBAN or bank account details, signature, date of birth, or biometric data</strong>. If you are uploading a photo of a letter, physically cover or black out these details before uploading. The deadlines and action items in a document can be understood without this information being visible.</p>
+              <p><strong>EU / GDPR:</strong> This tool is operated as a free personal project. It is not a commercial data processor under GDPR Article 4. Google LLC participates in the EU-US Data Privacy Framework and maintains standard contractual clauses for API data processing.</p>
+            </div>
+          )}
         </div>
       </div>
 
@@ -298,7 +541,7 @@ export default function AmtEasy() {
             {result.documents_to_bring?.length > 0 && (
               <div className="amt-section">
                 <p className="amt-section-title">Documents to bring</p>
-                {result.documents_to_bring.map((doc, i) => <CheckItem key={i} text={doc} />)}
+                {result.documents_to_bring.map((d, i) => <CheckItem key={i} text={d} />)}
               </div>
             )}
             {result.office_info && Object.values(result.office_info).some(Boolean) && (
@@ -323,6 +566,14 @@ export default function AmtEasy() {
                 ))}
               </div>
             )}
+            <button className="amt-save-btn" onClick={() => savePDF(result)} disabled={!jspdfReady}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
+                <polyline points="7 10 12 15 17 10" />
+                <line x1="12" y1="15" x2="12" y2="3" />
+              </svg>
+              Save as PDF
+            </button>
           </div>
         )}
       </div>
