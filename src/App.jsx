@@ -23,8 +23,8 @@ const LANGUAGES = [
   { code: "Vietnamese", label: "Ti\u1ebfng Vi\u1ec7t" },
   { code: "Hindi", label: "\u0939\u093f\u0928\u094d\u0926\u0940" },
   { code: "Somali", label: "Soomaali" },
-  { code: "Amharic", label: "\u12�\u121b\u122d\u129b" },
-  { code: "Tigrinya", label: "\u1275\u130d\u122d\u129b" },
+  { code: "Amharic", label: "አማርኛ" },
+  { code: "Tigrinya", label: "ትግርኛ" },
   { code: "Swedish", label: "Svenska" },
 ];
 
