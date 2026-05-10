@@ -428,8 +428,8 @@ export default function AmtEasy() {
         .amt-textarea::placeholder { color: #3a4f4c; }
         .amt-char-count { font-size: 11px; text-align: right; margin-top: 6px; transition: color 0.2s; }
         .amt-upload-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
-        .amt-upload-btn { background: transparent; border: 1px dashed #3a5550; border-radius: 8px; color: #4a5f5c; font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 7px; }
-        .amt-upload-btn:hover { border-color: #9e2b1a; color: #8a9a97; }
+        .amt-upload-btn { background: transparent; border: 1px dashed #9e2b1a; border-radius: 8px; color: #9e2b1a; font-family: 'DM Sans', sans-serif; font-size: 12px; padding: 8px 16px; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; gap: 7px; }
+        .amt-upload-btn:hover { border-color: #7d2015; color: #7d2015; background: rgba(158,43,26,0.06); }
         .amt-upload-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .amt-upload-divider { font-size: 11px; color: #3a4f4c; }
         .amt-examples { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -473,8 +473,8 @@ export default function AmtEasy() {
         .amt-number-item { display: flex; justify-content: space-between; align-items: center; padding: 10px 14px; background: #1e2a28; border-radius: 6px; margin-bottom: 6px; }
         .amt-number-label { font-size: 12px; color: #4a5f5c; font-weight: 400; }
         .amt-number-value { font-size: 13px; color: #d6c9b0; font-weight: 600; font-variant-numeric: tabular-nums; letter-spacing: 0.5px; }
-        .amt-save-btn { width: 100%; margin-top: 24px; padding: 13px; background: transparent; border: 1px solid #2e3f3c; border-radius: 8px; color: #8a7a62; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 500; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.3px; }
-        .amt-save-btn:hover:not(:disabled) { border-color: #9e2b1a; color: #d6c9b0; }
+        .amt-save-btn { width: 100%; margin-top: 24px; padding: 13px; background: #9e2b1a; border: none; border-radius: 8px; color: #d6c9b0; font-family: 'DM Sans', sans-serif; font-size: 13px; font-weight: 600; cursor: pointer; transition: all 0.2s; display: flex; align-items: center; justify-content: center; gap: 8px; letter-spacing: 0.5px; }
+        .amt-save-btn:hover:not(:disabled) { background: #7d2015; transform: translateY(-1px); }
         .amt-save-btn:disabled { opacity: 0.3; cursor: not-allowed; }
         .amt-error { color: #9e2b1a; font-size: 13px; padding: 16px; text-align: center; }
         @media (max-width: 600px) { .amt-header { padding: 18px 20px; } .amt-hero { padding: 40px 20px 32px; } .amt-about { padding: 0 20px 16px; } .amt-privacy-wrap { padding: 0 20px 16px; } .amt-main { padding: 0 20px 60px; } .amt-office-grid { grid-template-columns: 1fr; } .amt-controls { flex-direction: column; } .amt-analyze-btn { width: 100%; } }
