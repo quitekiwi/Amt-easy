@@ -36,10 +36,10 @@ const EXAMPLES = [
 ];
 
 const CHAR_LIMIT = 3000;
-const GEMINI_API_KEY = import.meta.env.VITE_GEMINI_API_KEY;
 
 // English defaults for the result headings. The AI returns translated
 // versions in `labels`; anything missing falls back to these.
+// Keep in sync with LABELS in api/analyze.js.
 const DEFAULT_LABELS = {
   deadlines: "Deadlines",
   actions: "What you need to do",
@@ -167,29 +167,21 @@ export default function AmtEasy() {
     setError(null);
     setResult(null);
 
-    const prompt = "You are Amt-Easy, a specialist in translating German bureaucratic documents into plain, clear language for international residents.\n\nAnalyze the following German document or text and respond ONLY in valid JSON with this exact structure:\n{\n  \"summary\": \"2-3 sentence plain language summary\",\n  \"document_type\": \"Type of document\",\n  \"urgency\": \"low | medium | high\",\n  \"deadlines\": [{\"date\": \"date string or null\", \"description\": \"what must be done\"}],\n  \"action_items\": [\"specific action\"],\n  \"documents_to_bring\": [\"document or item\"],\n  \"important_numbers\": [{\"label\": \"what this number is (e.g. IBAN, file number, phone, tax ID, case number)\", \"value\": \"the number\"}],\n  \"office_info\": {\"name\": \"office name or null\", \"address\": \"address or null\", \"room\": \"room number or null\", \"time\": \"appointment time or null\"},\n  \"labels\": " + JSON.stringify(DEFAULT_LABELS) + "\n}\n\nIMPORTANT: For important_numbers, extract ALL reference numbers, IBANs, tax IDs, phone numbers, file numbers, and case numbers mentioned in the document. Do not skip any numbers.\n\nThe \"urgency\" value must stay exactly one of: low, medium, high (in English). The \"labels\" object contains short interface headings: keep its keys, and translate each value into " + language + ".\n\nRespond in " + language + ". All other values in the JSON must be in " + language + " except JSON keys. If a section has no relevant data, use [] or null. No text outside the JSON.\n\nGerman document:\n" + input;
-
     try {
-      const response = await fetch(
-        "https://generativelanguage.googleapis.com/v1beta/models/gemini-2.5-flash-lite:generateContent?key=" + GEMINI_API_KEY,
-        {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            contents: [{ parts: [{ text: prompt }] }],
-            generationConfig: { temperature: 0.1 },
-          }),
-        }
-      );
+      const response = await fetch("/api/analyze", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ text: input, language }),
+      });
 
-      const data = await response.json();
+      const data = await response.json().catch(() => ({}));
       if (!response.ok) {
-        const apiError = new Error(data?.error?.message || "API error");
+        const apiError = new Error(data?.error || "API error");
         apiError.status = response.status;
         throw apiError;
       }
 
-      const text = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
+      const text = data?.text || "";
       const clean = text.replace(/```json|```/g, "").trim();
 
       let parsed;
@@ -960,7 +952,7 @@ export default function AmtEasy() {
           {privacyOpen && (
             <div className="amt-privacy-body" id="amt-privacy-body">
               <p><strong>What we collect:</strong> Nothing. Amt-Easy does not store, collect, or retain any documents or personal data you submit. No accounts, no cookies, no analytics.</p>
-              <p><strong>How your document is processed:</strong> The text you paste is sent in real time to Google Gemini AI (Google LLC) solely to generate your summary. Amt-Easy never sees or saves this content after your session ends. When you close the tab, it is gone.</p>
+              <p><strong>How your document is processed:</strong> The text you submit passes through Amt-Easy's server (hosted on Vercel), which does not store or log it, and is sent in real time to Google Gemini AI (Google LLC) solely to generate your summary. Amt-Easy never sees or saves this content after your session ends. When you close the tab, it is gone.</p>
               <p><strong>What Google sees:</strong> Your document text is transmitted to Google's servers for AI processing. Google's Privacy Policy applies to that step. We recommend removing or covering any information not necessary for understanding the document — such as your <strong>full passport number, national ID number, IBAN or bank account details, signature, date of birth, or biometric data</strong>. If you are scanning a paper letter, physically cover or black out these details before scanning.</p>
               <p><strong>EU / GDPR:</strong> This tool is operated as a free personal project. It is not a commercial data processor under GDPR Article 4. Google LLC participates in the EU-US Data Privacy Framework and maintains standard contractual clauses for API data processing.</p>
               {!privacyConfirmed ? (
