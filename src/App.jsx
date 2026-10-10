@@ -280,7 +280,7 @@ export default function AmtEasy() {
         /* Replaced "Beta · Free Tool" with something that earns its place */
         .amt-header-tag {
           font-size: 11px;
-          font-weight: 400;
+          font-weight: 600;
           letter-spacing: 1.5px;
           text-transform: uppercase;
           color: #93a397;
@@ -296,8 +296,8 @@ export default function AmtEasy() {
           font-size: 11px;
           letter-spacing: 3px;
           text-transform: uppercase;
-          color: #e0806a;
-          font-weight: 500;
+          color: #93a397;
+          font-weight: 600;
           margin-bottom: 14px;
         }
         .amt-title {
@@ -308,12 +308,12 @@ export default function AmtEasy() {
           margin-bottom: 14px;
           letter-spacing: -1px;
         }
-        .amt-title em { font-style: italic; color: #cf5a43; }
+        .amt-title em { font-style: italic; color: #c4513a; }
         .amt-subtitle {
           font-size: 15px;
           color: #a8b4a8;
           line-height: 1.65;
-          font-weight: 300;
+          font-weight: 400;
           max-width: 500px;
         }
 
@@ -338,7 +338,7 @@ export default function AmtEasy() {
           letter-spacing: 2.5px;
           text-transform: uppercase;
           color: #93a397;
-          font-weight: 500;
+          font-weight: 600;
           margin-bottom: 14px;
         }
 
@@ -358,10 +358,10 @@ export default function AmtEasy() {
           margin-bottom: 10px;
         }
         .amt-about-text {
-          font-size: 14px;
+          font-size: 15px;
           color: #a8b4a8;
           line-height: 1.8;
-          font-weight: 300;
+          font-weight: 400;
           margin-bottom: 12px;
         }
         /* Legal notice demoted — footnote treatment */
@@ -418,7 +418,7 @@ export default function AmtEasy() {
         }
         .amt-privacy-chevron.open { transform: rotate(180deg); }
         .amt-privacy-body { padding: 0 24px 20px; border-top: 1px solid rgba(214,201,176,0.06); }
-        .amt-privacy-body p { font-size: 13px; color: #a8b4a8; line-height: 1.8; font-weight: 300; margin-top: 14px; }
+        .amt-privacy-body p { font-size: 13px; color: #a8b4a8; line-height: 1.8; font-weight: 400; margin-top: 14px; }
         .amt-privacy-body strong { color: #d6c9b0; font-weight: 500; }
         .amt-privacy-confirm {
           margin-top: 20px;
@@ -469,7 +469,7 @@ export default function AmtEasy() {
           resize: vertical;
           min-height: 160px;
           transition: border-color 0.2s;
-          font-weight: 300;
+          font-weight: 400;
           caret-color: #e0806a;
         }
         .amt-textarea:focus { border-color: rgba(224,128,106,0.6); outline: none; }
@@ -516,7 +516,7 @@ export default function AmtEasy() {
           letter-spacing: 1.5px;
           text-transform: uppercase;
           color: #93a397;
-          font-weight: 500;
+          font-weight: 600;
         }
         .amt-scan-tips[open] .amt-scan-tips-title { margin-bottom: 8px; }
         .amt-scan-tips-title:hover { color: #d6c9b0; }
@@ -616,7 +616,7 @@ export default function AmtEasy() {
           font-size: 15px;
           line-height: 1.75;
           color: #c4cbbf;
-          font-weight: 300;
+          font-weight: 400;
           padding: 16px 18px;
           background: #161e1b;
           border-inline-start: 2px solid #9e2b1a;
@@ -639,8 +639,8 @@ export default function AmtEasy() {
         [dir="rtl"] .amt-section-title, [dir="rtl"] .amt-office-label, [dir="rtl"] .amt-urgency-pill { letter-spacing: 0; }
         .amt-deadline-item { display: flex; gap: 14px; align-items: flex-start; padding: 10px 0; border-bottom: 1px solid rgba(214,201,176,0.05); }
         .amt-deadline-date { font-size: 14px; font-weight: 600; color: #e0806a; white-space: nowrap; min-width: 90px; padding-top: 1px; }
-        .amt-deadline-desc { font-size: 14px; color: #c4cbbf; line-height: 1.5; font-weight: 300; }
-        .amt-checklist-item { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; font-size: 14px; color: #c4cbbf; line-height: 1.5; font-weight: 300; cursor: pointer; }
+        .amt-deadline-desc { font-size: 14px; color: #c4cbbf; line-height: 1.5; font-weight: 400; }
+        .amt-checklist-item { position: relative; display: flex; align-items: flex-start; gap: 12px; padding: 8px 0; font-size: 14px; color: #c4cbbf; line-height: 1.5; font-weight: 400; cursor: pointer; }
         .amt-check-input { position: absolute; opacity: 0; width: 1px; height: 1px; }
         .amt-check-box {
           width: 18px; height: 18px;
@@ -662,7 +662,7 @@ export default function AmtEasy() {
         .amt-check-input:checked ~ .amt-check-text { text-decoration: line-through; opacity: 0.55; }
         .amt-office-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
         .amt-office-item { background: #161e1b; border-radius: 6px; padding: 12px 14px; }
-        .amt-office-label { font-size: 11px; color: #93a397; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; }
+        .amt-office-label { font-size: 11px; color: #93a397; letter-spacing: 1.5px; text-transform: uppercase; margin-bottom: 4px; font-weight: 600; }
         .amt-office-value { font-size: 14px; color: #d6c9b0; font-weight: 400; }
         .amt-number-item { display: flex; justify-content: space-between; align-items: center; gap: 12px; padding: 10px 14px; background: #161e1b; border-radius: 6px; margin-bottom: 6px; }
         .amt-number-label { font-size: 13px; color: #93a397; font-weight: 400; }
@@ -706,6 +706,13 @@ export default function AmtEasy() {
           .amt-office-grid { grid-template-columns: 1fr; }
           .amt-controls { flex-direction: column; align-items: stretch; }
           .amt-analyze-btn { width: 100%; }
+        }
+
+        @media (prefers-contrast: more) {
+          .amt-subtitle, .amt-about-text, .amt-privacy-body p, .amt-summary, .amt-deadline-desc, .amt-checklist-item { color: #e8dcc8; }
+          .amt-header-tag, .amt-eyebrow, .amt-card-label, .amt-about-legal, .amt-char-count, .amt-upload-divider, .amt-scan-tips-title, .amt-scan-tip,
+          .amt-section-title, .amt-office-label, .amt-number-label, .amt-disclaimer-top, .amt-input-disclaimer, .amt-lang-label, .amt-privacy-label, .amt-privacy-confirm-text { color: #c4cbbf !important; }
+          .amt-textarea::placeholder { color: #a8b4a8; }
         }
 
         @media (prefers-reduced-motion: reduce) {
