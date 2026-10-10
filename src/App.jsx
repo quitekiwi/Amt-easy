@@ -288,7 +288,7 @@ export default function AmtEasy() {
 
         /* ── HERO ── */
         .amt-hero {
-          padding: 52px 40px 40px;
+          padding: 52px 40px 28px;
           max-width: 760px;
           margin: 0 auto;
         }
@@ -318,9 +318,9 @@ export default function AmtEasy() {
         }
 
         /* ── LAYOUT WRAPPERS ── */
-        .amt-about { max-width: 760px; margin: 0 auto; padding: 0 40px 12px; }
+        .amt-about { max-width: 760px; margin: 0 auto; padding: 0 40px 80px; }
         .amt-privacy-wrap { max-width: 760px; margin: 0 auto; padding: 0 40px 12px; }
-        .amt-main { max-width: 760px; margin: 0 auto; padding: 0 40px 80px; }
+        .amt-main { max-width: 760px; margin: 0 auto; padding: 0 40px 12px; }
 
         /* ── CARDS ── */
         /* Cards now have a visible lift from the page */
@@ -510,13 +510,16 @@ export default function AmtEasy() {
           border-left: 2px solid rgba(214,201,176,0.08);
         }
         .amt-scan-tips-title {
+          cursor: pointer;
+          list-style-position: inside;
           font-size: 11px;
           letter-spacing: 1.5px;
           text-transform: uppercase;
           color: #93a397;
           font-weight: 500;
-          margin-bottom: 8px;
         }
+        .amt-scan-tips[open] .amt-scan-tips-title { margin-bottom: 8px; }
+        .amt-scan-tips-title:hover { color: #d6c9b0; }
         .amt-scan-tip { font-size: 13px; color: #93a397; line-height: 1.7; }
         .amt-scan-tip strong { color: #d6c9b0; font-weight: 500; }
         .amt-examples { display: flex; gap: 8px; flex-wrap: wrap; }
@@ -537,6 +540,8 @@ export default function AmtEasy() {
 
         /* ── CONTROLS ── */
         .amt-controls { display: flex; gap: 12px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
+        .amt-lang-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
+        .amt-lang-label { font-size: 14px; color: #a8b4a8; }
         .amt-lang-select { position: relative; }
         .amt-lang-native {
           appearance: none;
@@ -582,6 +587,7 @@ export default function AmtEasy() {
           transform: translateY(-1px);
           box-shadow: 0 4px 14px rgba(158,43,26,0.4);
         }
+        .amt-input-disclaimer { font-size: 12px; color: #93a397; text-align: center; margin-top: 12px; }
         .amt-analyze-btn:disabled { opacity: 0.45; cursor: not-allowed; box-shadow: none; }
 
         /* ── LOADING ── */
@@ -694,12 +700,11 @@ export default function AmtEasy() {
         @media (max-width: 600px) {
           .amt-header { padding: 18px 20px; }
           .amt-hero { padding: 36px 20px 28px; }
-          .amt-about { padding: 0 20px 12px; }
+          .amt-about { padding: 0 20px 60px; }
           .amt-privacy-wrap { padding: 0 20px 12px; }
-          .amt-main { padding: 0 20px 60px; }
+          .amt-main { padding: 0 20px 12px; }
           .amt-office-grid { grid-template-columns: 1fr; }
           .amt-controls { flex-direction: column; align-items: stretch; }
-          .amt-lang-native { width: 100%; }
           .amt-analyze-btn { width: 100%; }
         }
 
@@ -756,62 +761,25 @@ export default function AmtEasy() {
         <p className="amt-subtitle">Paste any German government letter or notice. Get a plain-language summary, your deadlines, and a checklist in your language.</p>
       </div>
 
-      {/* About */}
-      <div className="amt-about">
-        <div className="amt-about-card">
-          <h2 className="amt-about-title">What is Amt-Easy?</h2>
-          <p className="amt-about-text">German bureaucratic language — known as Beamtendeutsch — is notoriously dense, even for native speakers. For international residents, a single letter from the Ausländerbehörde, Finanzamt, or Einwohnermeldeamt can feel impossible to decode.</p>
-          <p className="amt-about-text">Amt-Easy uses AI to instantly translate these documents into plain language — giving you a clear summary, your deadlines, what you need to bring, and who to contact. Available in 25 languages.</p>
-          <p className="amt-about-legal">Legal notice: Amt-Easy is an educational tool only. Summaries are AI-generated and do not constitute legal advice (Rechtsberatung) or replace consultation with a qualified professional. Always verify directly with the relevant authority before acting. The creators accept no liability for decisions made based on this tool's output.</p>
-        </div>
-      </div>
-
-      {/* Privacy */}
-      <div className="amt-privacy-wrap" ref={privacyRef}>
-        <div className={"amt-privacy-card" + (privacyOpen && !privacyConfirmed ? " highlight" : "")}>
-          <button
-            type="button"
-            ref={privacyHeaderRef}
-            className="amt-privacy-header"
-            aria-expanded={privacyOpen}
-            aria-controls="amt-privacy-body"
-            onClick={() => setPrivacyOpen(!privacyOpen)}
-          >
-            <span className="amt-privacy-header-left">
-              <svg className="amt-privacy-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
-              </svg>
-              <span className="amt-privacy-label">Privacy &amp; Data Notice</span>
-            </span>
-            <span className={"amt-privacy-chevron" + (privacyOpen ? " open" : "")} aria-hidden="true">&#9660;</span>
-          </button>
-          {privacyOpen && (
-            <div className="amt-privacy-body" id="amt-privacy-body">
-              <p><strong>What we collect:</strong> Nothing. Amt-Easy does not store, collect, or retain any documents or personal data you submit. No accounts, no cookies, no analytics.</p>
-              <p><strong>How your document is processed:</strong> The text you paste is sent in real time to Google Gemini AI (Google LLC) solely to generate your summary. Amt-Easy never sees or saves this content after your session ends. When you close the tab, it is gone.</p>
-              <p><strong>What Google sees:</strong> Your document text is transmitted to Google's servers for AI processing. Google's Privacy Policy applies to that step. We recommend removing or covering any information not necessary for understanding the document — such as your <strong>full passport number, national ID number, IBAN or bank account details, signature, date of birth, or biometric data</strong>. If you are scanning a paper letter, physically cover or black out these details before scanning.</p>
-              <p><strong>EU / GDPR:</strong> This tool is operated as a free personal project. It is not a commercial data processor under GDPR Article 4. Google LLC participates in the EU-US Data Privacy Framework and maintains standard contractual clauses for API data processing.</p>
-              {!privacyConfirmed ? (
-                <div className="amt-privacy-confirm">
-                  <span className="amt-privacy-confirm-text">I have read and understood how my data is handled.</span>
-                  <button type="button" className="amt-privacy-confirm-btn" onClick={confirmPrivacy}>
-                    I understand — continue
-                  </button>
-                </div>
-              ) : (
-                <div className="amt-privacy-confirmed">
-                  <span aria-hidden="true">&#10003;</span>
-                  <span>You have acknowledged this notice for this session.</span>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Main */}
       <div className="amt-main">
         <div className="amt-card amt-input-card">
+          <div className="amt-lang-row">
+            <label className="amt-lang-label" htmlFor="amt-lang">Explain in</label>
+            <div className="amt-lang-select">
+              <select
+                id="amt-lang"
+                className="amt-lang-native"
+                value={language}
+                onChange={(e) => setLanguage(e.target.value)}
+              >
+                {LANGUAGES.map((lang) => (
+                  <option key={lang.code} value={lang.code} lang={lang.tag}>{lang.label}</option>
+                ))}
+              </select>
+              <span className="amt-lang-chevron" aria-hidden="true">&#9660;</span>
+            </div>
+          </div>
           <label className="amt-card-label" htmlFor="amt-doc-text">Paste German document text</label>
           <textarea
             id="amt-doc-text"
@@ -849,11 +817,11 @@ export default function AmtEasy() {
 
           {notice && <p className="amt-notice">{notice}</p>}
 
-          <div className="amt-scan-tips">
-            <p className="amt-scan-tips-title">No PDF? Scan your document first</p>
+          <details className="amt-scan-tips">
+            <summary className="amt-scan-tips-title">No PDF? How to scan your letter</summary>
             <p className="amt-scan-tip"><strong>iPhone:</strong> Open Notes &#8594; tap the camera icon &#8594; Scan Documents &#8594; save to Files &#8594; upload here.</p>
             <p className="amt-scan-tip"><strong>Android:</strong> Open Google Drive &#8594; tap + &#8594; Scan &#8594; save as PDF &#8594; upload here.</p>
-          </div>
+          </details>
 
           {pdfLoading && (
             <div className="amt-pdf-loading">
@@ -871,23 +839,11 @@ export default function AmtEasy() {
           />
 
           <div className="amt-controls">
-            <div className="amt-lang-select">
-              <select
-                className="amt-lang-native"
-                aria-label="Language for your explanation"
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code} lang={lang.tag}>{lang.label}</option>
-                ))}
-              </select>
-              <span className="amt-lang-chevron" aria-hidden="true">&#9660;</span>
-            </div>
             <button type="button" className="amt-analyze-btn" onClick={() => requirePrivacy("analyze")} disabled={loading || !input.trim() || overLimit}>
               {loading ? "Analyzing..." : "Analyze Document"}
             </button>
           </div>
+          <p className="amt-input-disclaimer">Educational tool only — not legal advice (Rechtsberatung).</p>
         </div>
 
         {loading && (
@@ -974,6 +930,60 @@ export default function AmtEasy() {
           </div>
         )}
       </div>
+
+      {/* Privacy */}
+      <div className="amt-privacy-wrap" ref={privacyRef}>
+        <div className={"amt-privacy-card" + (privacyOpen && !privacyConfirmed ? " highlight" : "")}>
+          <button
+            type="button"
+            ref={privacyHeaderRef}
+            className="amt-privacy-header"
+            aria-expanded={privacyOpen}
+            aria-controls="amt-privacy-body"
+            onClick={() => setPrivacyOpen(!privacyOpen)}
+          >
+            <span className="amt-privacy-header-left">
+              <svg className="amt-privacy-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
+              </svg>
+              <span className="amt-privacy-label">Privacy &amp; Data Notice</span>
+            </span>
+            <span className={"amt-privacy-chevron" + (privacyOpen ? " open" : "")} aria-hidden="true">&#9660;</span>
+          </button>
+          {privacyOpen && (
+            <div className="amt-privacy-body" id="amt-privacy-body">
+              <p><strong>What we collect:</strong> Nothing. Amt-Easy does not store, collect, or retain any documents or personal data you submit. No accounts, no cookies, no analytics.</p>
+              <p><strong>How your document is processed:</strong> The text you paste is sent in real time to Google Gemini AI (Google LLC) solely to generate your summary. Amt-Easy never sees or saves this content after your session ends. When you close the tab, it is gone.</p>
+              <p><strong>What Google sees:</strong> Your document text is transmitted to Google's servers for AI processing. Google's Privacy Policy applies to that step. We recommend removing or covering any information not necessary for understanding the document — such as your <strong>full passport number, national ID number, IBAN or bank account details, signature, date of birth, or biometric data</strong>. If you are scanning a paper letter, physically cover or black out these details before scanning.</p>
+              <p><strong>EU / GDPR:</strong> This tool is operated as a free personal project. It is not a commercial data processor under GDPR Article 4. Google LLC participates in the EU-US Data Privacy Framework and maintains standard contractual clauses for API data processing.</p>
+              {!privacyConfirmed ? (
+                <div className="amt-privacy-confirm">
+                  <span className="amt-privacy-confirm-text">I have read and understood how my data is handled.</span>
+                  <button type="button" className="amt-privacy-confirm-btn" onClick={confirmPrivacy}>
+                    I understand — continue
+                  </button>
+                </div>
+              ) : (
+                <div className="amt-privacy-confirmed">
+                  <span aria-hidden="true">&#10003;</span>
+                  <span>You have acknowledged this notice for this session.</span>
+                </div>
+              )}
+            </div>
+          )}
+        </div>
+      </div>
+
+      {/* About */}
+      <div className="amt-about">
+        <div className="amt-about-card">
+          <h2 className="amt-about-title">What is Amt-Easy?</h2>
+          <p className="amt-about-text">German bureaucratic language — known as Beamtendeutsch — is notoriously dense, even for native speakers. For international residents, a single letter from the Ausländerbehörde, Finanzamt, or Einwohnermeldeamt can feel impossible to decode.</p>
+          <p className="amt-about-text">Amt-Easy uses AI to instantly translate these documents into plain language — giving you a clear summary, your deadlines, what you need to bring, and who to contact. Available in 25 languages.</p>
+          <p className="amt-about-legal">Legal notice: Amt-Easy is an educational tool only. Summaries are AI-generated and do not constitute legal advice (Rechtsberatung) or replace consultation with a qualified professional. Always verify directly with the relevant authority before acting. The creators accept no liability for decisions made based on this tool's output.</p>
+        </div>
+      </div>
+
     </div>
   );
 }
