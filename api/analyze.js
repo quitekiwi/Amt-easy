@@ -3,7 +3,7 @@
 // prompt is built here so this endpoint can't be used as a general AI proxy.
 // Nothing is stored or logged.
 
-const MODEL = "gemini-2.5-flash-lite";
+const MODEL = "gemini-3.5-flash-lite";
 const CHAR_LIMIT = 3000;
 
 const LANGUAGES = [
@@ -71,12 +71,15 @@ export default async function handler(req, res) {
 
     const data = await response.json();
     if (!response.ok) {
+      // Log Google's reason (never the letter text) to the Vercel function logs.
+      console.error("Gemini error", response.status, data?.error?.status, data?.error?.message);
       return res.status(response.status === 429 ? 429 : 502).json({ error: "AI service error" });
     }
 
     const result = data?.candidates?.[0]?.content?.parts?.[0]?.text || "";
     return res.status(200).json({ text: result });
-  } catch {
+  } catch (err) {
+    console.error("Gemini unreachable", err?.message);
     return res.status(502).json({ error: "AI service unreachable" });
   }
 }
