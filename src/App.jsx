@@ -441,6 +441,7 @@ export default function AmtEasy() {
           margin-bottom: 12px;
         }
         /* Legal notice demoted — footnote treatment */
+        .amt-about-text, .amt-about-legal { max-width: 70ch; }
         .amt-about-legal {
           font-size: 12px;
           color: #93a397;
@@ -819,6 +820,7 @@ export default function AmtEasy() {
         @media (pointer: coarse) {
           .amt-upload-btn, .amt-example-btn, .amt-lang-native, .amt-analyze-btn, .amt-privacy-confirm-btn, .amt-save-btn, .amt-ui-lang-btn { min-height: 44px; }
           .amt-photo-remove { width: 36px; height: 36px; }
+          .amt-textarea, .amt-lang-native { font-size: 16px; }
           .amt-privacy-header { min-height: 48px; }
         }
 
@@ -844,6 +846,7 @@ export default function AmtEasy() {
 
         @media (prefers-reduced-motion: reduce) {
           *, *::before, *::after { animation-duration: 0.01ms !important; transition-duration: 0.01ms !important; scroll-behavior: auto !important; }
+          .amt-spinner { animation-duration: 2s !important; animation-iteration-count: infinite !important; }
         }
 
         /* ── PRINT / SAVE AS PDF ──
@@ -915,7 +918,7 @@ export default function AmtEasy() {
       </div>
 
       {/* Main */}
-      <div className="amt-main">
+      <main className="amt-main">
         <div className="amt-card amt-input-card">
           <div className="amt-lang-row">
             <label className="amt-lang-label" htmlFor="amt-lang">{t.explainIn}</label>
@@ -993,7 +996,7 @@ export default function AmtEasy() {
             </div>
           )}
 
-          {notice && <p className="amt-notice">{notice}</p>}
+          {notice && <p className="amt-notice" role="status">{notice}</p>}
 
           <details className="amt-scan-tips">
             <summary className="amt-scan-tips-title">{t.scanTitle}</summary>
@@ -1113,7 +1116,7 @@ export default function AmtEasy() {
                     <span>{rich(item.text)}</span>
                     {item.link && (
                       <a className="amt-help-link" href={item.link} target="_blank" rel="noopener noreferrer">
-                        {item.linkLabel}<span className="amt-print-only"> ({item.link})</span>
+                        {item.linkLabel}<span className="amt-sr-only"> {t.newTab}</span><span className="amt-print-only"> ({item.link})</span>
                       </a>
                     )}
                   </li>
@@ -1131,7 +1134,7 @@ export default function AmtEasy() {
             </button>
           </div>
         )}
-      </div>
+      </main>
 
       {/* Privacy */}
       <div className="amt-privacy-wrap" ref={privacyRef}>

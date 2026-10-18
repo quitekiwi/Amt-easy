@@ -6,6 +6,7 @@ export const UI_LANGS = ["en", "de"];
 export const UI = {
   en: {
     switchLabel: "Website language",
+    newTab: "(opens in a new tab)",
     headerTag: "Free · No signup",
     eyebrow: "German Document Interpreter",
     titleA: "Cut through the",
@@ -86,6 +87,7 @@ export const UI = {
 
   de: {
     switchLabel: "Sprache der Website",
+    newTab: "(öffnet in neuem Tab)",
     headerTag: "Kostenlos · Ohne Anmeldung",
     eyebrow: "Behördenbriefe verstehen",
     titleA: "Schluss mit dem",
