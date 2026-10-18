@@ -1,0 +1,171 @@
+// Interface text in English and German. **double asterisks** mark bold text.
+// The explanation itself is produced by the AI in the visitor's chosen language.
+
+export const UI_LANGS = ["en", "de"];
+
+export const UI = {
+  en: {
+    switchLabel: "Website language",
+    headerTag: "Free · No signup",
+    eyebrow: "German Document Interpreter",
+    titleA: "Cut through the",
+    titleB: "Beamtendeutsch.",
+    subtitle: "Paste, upload or photograph any German government letter. Get a plain-language summary, your deadlines, and a checklist in your language.",
+
+    explainIn: "Explain in",
+    pasteLabel: "Paste German document text",
+    placeholder: "Paste the text from your German letter here...",
+    charsRemaining: (n) => n.toLocaleString("en") + " characters remaining",
+    charsOver: (n) => n.toLocaleString("en") + " characters over limit",
+    uploadPdf: "Upload PDF",
+    takePhoto: "Photo of letter",
+    orExample: "or try an example:",
+    examples: ["Residence Permit", "Tax ID", "Anmeldung"],
+    scanTitle: "Prefer a PDF? How to scan your letter",
+    scanIphone: "Open Notes → tap the camera icon → Scan Documents → save to Files → upload here.",
+    scanAndroid: "Open Google Drive → tap + → Scan → save as PDF → upload here.",
+    photosLabel: (n, max) => "Photos to analyze (" + n + " of " + max + ")",
+    photoAlt: (n) => "Photo of page " + n,
+    removePhoto: (n) => "Remove photo of page " + n,
+    photoHint: "Add one photo per page, in order. Cover personal numbers before taking the photo.",
+    readingPdf: "Reading PDF...",
+    preparingPhoto: "Preparing photo...",
+    analyze: "Analyze Document",
+    analyzing: "Analyzing...",
+    inputDisclaimer: "Educational tool only — not legal advice (Rechtsberatung).",
+    loading: "Reading your document...",
+
+    statusAnalyzing: "Analyzing your document…",
+    statusPdf: "Reading PDF…",
+    statusPhoto: "Preparing photo…",
+    statusReady: "Your explanation is ready.",
+
+    errOnlyPdf: "Only PDF files are supported here. For a photo, use “Photo of letter”.",
+    errPdfNoText: "Could not find any text in this PDF — it is probably a scanned image. Use “Photo of letter” instead, or paste the text.",
+    errPdfFail: "Failed to read the PDF. Please try again or paste the text manually.",
+    noticePdfLong: (limit) => "This PDF is longer than " + limit.toLocaleString("en") + " characters, so only the first part was loaded. Deadlines are often near the end of a letter, so check the rest yourself or paste the most important part instead.",
+    errPhotoFormat: "This photo couldn't be opened. Please use a JPG or PNG photo, or take a screenshot of it.",
+    errPhotoMax: (max) => "You can add up to " + max + " photos (one per page).",
+    errNet: "Could not reach the AI service. Check your internet connection and try again.",
+    errBusy: "The AI service is busy right now. Please wait a minute and try again.",
+    errTooLarge: "The photos are too large to send. Try fewer photos or retake them a little further away.",
+    errGeneric: "The AI service couldn't process this document right now. Please try again in a moment.",
+
+    disclaimerTop: "Educational tool only. Not legal advice (Rechtsberatung). Always check dates and numbers against the original letter and verify with the relevant authority.",
+    photoNote: "Read from a photo. The AI can misread text in photos, so check dates, amounts and reference numbers against the original letter.",
+    unstructuredTitle: "Document explanation",
+    unstructuredNote: "We couldn't sort this letter into deadlines and checklists, so here is the explanation as the AI wrote it. Read it carefully and check the original letter for dates.",
+    parseFail: "Could not read the AI's answer. Please try again.",
+    printFoot: "Amt-Easy — Educational tool only. Not legal advice (Rechtsberatung). Always verify with the relevant authority.",
+
+    helpTitle: "Need help with this letter?",
+    help: [
+      { text: "If a deadline is close or something is unclear, contact the office that sent the letter. Quote the reference number (**Aktenzeichen**) shown on the letter." },
+      { text: "**Migrationsberatung (MBE)** — free advice for immigrants over 27, often in your own language.", link: "https://bamf-navi.bamf.de/de/Themen/Migrationsberatung/", linkLabel: "Find an office (BAMF-NAvI)" },
+      { text: "**mbeon** — the same free advice, online by chat.", link: "https://www.mbeon.de/", linkLabel: "mbeon.de" },
+      { text: "**Jugendmigrationsdienste** — free advice for young people aged 12 to 27.", link: "https://www.jugendmigrationsdienste.de/", linkLabel: "jugendmigrationsdienste.de" },
+      { text: "**Beratungshilfe** — on a low income, you can get advice from a lawyer for at most €15. You apply at your local district court (Amtsgericht).", link: "https://service.justiz.de/beratungshilfe", linkLabel: "More at justiz.de" },
+    ],
+
+    privacyLabel: "Privacy & Data Notice",
+    privacy: [
+      "**What we collect:** Nothing. Amt-Easy does not store, collect, or retain any documents or personal data you submit. No accounts, no cookies, no analytics.",
+      "**How your document is processed:** The text or photos you submit pass through Amt-Easy's server (hosted on Vercel), which does not store or log them, and are sent in real time to Google Gemini AI (Google LLC) solely to generate your explanation. Photos are shrunk and re-saved in your browser before sending, which removes hidden photo data such as location (GPS) and camera details. When you close the tab, it is gone.",
+      "**What Google sees:** Your document text or photos are transmitted to Google's servers for AI processing. Google's Privacy Policy applies to that step. We recommend removing or covering any information not necessary for understanding the document — such as your **full passport number, national ID number, IBAN or bank account details, signature, date of birth, or biometric data**. A photo shows everything in the picture: cover these details before taking it, and make sure no other documents, people or surroundings are in the shot.",
+      "**EU / GDPR:** This tool is operated as a free personal project. It is not a commercial data processor under GDPR Article 4. Google LLC participates in the EU-US Data Privacy Framework and maintains standard contractual clauses for API data processing.",
+    ],
+    privacyConfirmText: "I have read and understood how my data is handled.",
+    privacyConfirmBtn: "I understand — continue",
+    privacyConfirmed: "You have acknowledged this notice for this session.",
+
+    aboutTitle: "What is Amt-Easy?",
+    aboutP1: "German bureaucratic language — known as Beamtendeutsch — is notoriously dense, even for native speakers. For international residents, a single letter from the Ausländerbehörde, Finanzamt, or Einwohnermeldeamt can feel impossible to decode.",
+    aboutP2: "Amt-Easy uses AI to instantly translate these documents into plain language — giving you a clear summary, your deadlines, what you need to bring, and who to contact. Available in 25 languages.",
+    aboutLegal: "Legal notice: Amt-Easy is an educational tool only. Summaries are AI-generated and do not constitute legal advice (Rechtsberatung) or replace consultation with a qualified professional. The AI can misread text, especially in photos. Always check dates, amounts and reference numbers against the original letter, and verify directly with the relevant authority before acting. The creators accept no liability for decisions made based on this tool's output.",
+  },
+
+  de: {
+    switchLabel: "Sprache der Website",
+    headerTag: "Kostenlos · Ohne Anmeldung",
+    eyebrow: "Behördenbriefe verstehen",
+    titleA: "Schluss mit dem",
+    titleB: "Beamtendeutsch.",
+    subtitle: "Fügen Sie einen Brief vom Amt ein, laden Sie ihn hoch oder fotografieren Sie ihn. Sie erhalten eine verständliche Zusammenfassung, Ihre Fristen und eine Checkliste – in Ihrer Sprache.",
+
+    explainIn: "Erklären auf",
+    pasteLabel: "Text des Briefs einfügen",
+    placeholder: "Fügen Sie hier den Text Ihres Briefs ein …",
+    charsRemaining: (n) => "Noch " + n.toLocaleString("de") + " Zeichen",
+    charsOver: (n) => n.toLocaleString("de") + " Zeichen zu viel",
+    uploadPdf: "PDF hochladen",
+    takePhoto: "Brief fotografieren",
+    orExample: "oder ein Beispiel ausprobieren:",
+    examples: ["Aufenthaltstitel", "Steuer-ID", "Anmeldung"],
+    scanTitle: "Lieber als PDF? So scannen Sie Ihren Brief",
+    scanIphone: "Notizen öffnen → Kamera-Symbol tippen → Dokumente scannen → in Dateien sichern → hier hochladen.",
+    scanAndroid: "Google Drive öffnen → + tippen → Scannen → als PDF speichern → hier hochladen.",
+    photosLabel: (n, max) => "Fotos zur Auswertung (" + n + " von " + max + ")",
+    photoAlt: (n) => "Foto von Seite " + n,
+    removePhoto: (n) => "Foto von Seite " + n + " entfernen",
+    photoHint: "Ein Foto pro Seite, in der richtigen Reihenfolge. Decken Sie persönliche Nummern vor dem Fotografieren ab.",
+    readingPdf: "PDF wird gelesen …",
+    preparingPhoto: "Foto wird vorbereitet …",
+    analyze: "Brief erklären",
+    analyzing: "Wird erklärt …",
+    inputDisclaimer: "Nur zur Information – keine Rechtsberatung.",
+    loading: "Ihr Brief wird gelesen …",
+
+    statusAnalyzing: "Ihr Brief wird erklärt …",
+    statusPdf: "PDF wird gelesen …",
+    statusPhoto: "Foto wird vorbereitet …",
+    statusReady: "Ihre Erklärung ist fertig.",
+
+    errOnlyPdf: "Hier können nur PDF-Dateien hochgeladen werden. Für ein Foto nutzen Sie „Brief fotografieren“.",
+    errPdfNoText: "In dieser PDF wurde kein Text gefunden – vermutlich ist sie ein eingescanntes Bild. Nutzen Sie stattdessen „Brief fotografieren“ oder fügen Sie den Text ein.",
+    errPdfFail: "Die PDF konnte nicht gelesen werden. Bitte versuchen Sie es erneut oder fügen Sie den Text ein.",
+    noticePdfLong: (limit) => "Diese PDF hat mehr als " + limit.toLocaleString("de") + " Zeichen, daher wurde nur der erste Teil übernommen. Fristen stehen oft am Ende eines Briefs – prüfen Sie den Rest selbst oder fügen Sie den wichtigsten Teil ein.",
+    errPhotoFormat: "Dieses Foto konnte nicht geöffnet werden. Bitte nutzen Sie ein JPG- oder PNG-Foto oder machen Sie einen Screenshot davon.",
+    errPhotoMax: (max) => "Sie können bis zu " + max + " Fotos hinzufügen (eines pro Seite).",
+    errNet: "Der KI-Dienst ist nicht erreichbar. Bitte prüfen Sie Ihre Internetverbindung und versuchen Sie es erneut.",
+    errBusy: "Der KI-Dienst ist gerade ausgelastet. Bitte warten Sie eine Minute und versuchen Sie es erneut.",
+    errTooLarge: "Die Fotos sind zu groß zum Senden. Nutzen Sie weniger Fotos oder fotografieren Sie mit etwas mehr Abstand.",
+    errGeneric: "Der KI-Dienst konnte diesen Brief gerade nicht verarbeiten. Bitte versuchen Sie es gleich noch einmal.",
+
+    disclaimerTop: "Nur zur Information. Keine Rechtsberatung. Prüfen Sie Daten und Nummern immer am Originalbrief und klären Sie Fragen mit der zuständigen Behörde.",
+    photoNote: "Von einem Foto gelesen. Die KI kann Text auf Fotos falsch lesen – prüfen Sie Daten, Beträge und Aktenzeichen am Originalbrief.",
+    unstructuredTitle: "Erklärung des Briefs",
+    unstructuredNote: "Dieser Brief ließ sich nicht in Fristen und Checklisten gliedern. Hier ist die Erklärung so, wie die KI sie geschrieben hat. Lesen Sie sie sorgfältig und prüfen Sie Daten im Originalbrief.",
+    parseFail: "Die Antwort der KI konnte nicht gelesen werden. Bitte versuchen Sie es erneut.",
+    printFoot: "Amt-Easy – Nur zur Information. Keine Rechtsberatung. Klären Sie Fragen immer mit der zuständigen Behörde.",
+
+    helpTitle: "Brauchen Sie Hilfe mit diesem Brief?",
+    help: [
+      { text: "Wenn eine Frist bald abläuft oder etwas unklar ist, wenden Sie sich direkt an die Stelle, die den Brief geschickt hat. Nennen Sie dabei das **Aktenzeichen** aus dem Brief." },
+      { text: "**Migrationsberatung (MBE)** – kostenlose Beratung für Zugewanderte über 27 Jahre, oft auch in Ihrer Sprache.", link: "https://bamf-navi.bamf.de/de/Themen/Migrationsberatung/", linkLabel: "Beratungsstelle finden (BAMF-NAvI)" },
+      { text: "**mbeon** – dieselbe kostenlose Beratung online per Chat.", link: "https://www.mbeon.de/", linkLabel: "mbeon.de" },
+      { text: "**Jugendmigrationsdienste** – kostenlose Beratung für junge Menschen von 12 bis 27 Jahren.", link: "https://www.jugendmigrationsdienste.de/", linkLabel: "jugendmigrationsdienste.de" },
+      { text: "**Beratungshilfe** – bei geringem Einkommen Beratung durch eine Anwältin oder einen Anwalt für höchstens 15 €. Den Antrag stellen Sie beim Amtsgericht.", link: "https://service.justiz.de/beratungshilfe", linkLabel: "Mehr bei justiz.de" },
+    ],
+
+    privacyLabel: "Datenschutzhinweis",
+    privacy: [
+      "**Was wir speichern:** Nichts. Amt-Easy speichert und sammelt keine Dokumente oder persönlichen Daten, die Sie einreichen. Keine Konten, keine Cookies, keine Analyse-Tools.",
+      "**Wie Ihr Dokument verarbeitet wird:** Text oder Fotos, die Sie einreichen, laufen über den Server von Amt-Easy (gehostet bei Vercel), der sie weder speichert noch protokolliert, und werden in Echtzeit an Google Gemini AI (Google LLC) gesendet – ausschließlich, um Ihre Erklärung zu erstellen. Fotos werden vorher in Ihrem Browser verkleinert und neu gespeichert; dabei werden versteckte Bilddaten wie Standort (GPS) und Kameradaten entfernt. Wenn Sie den Tab schließen, ist alles weg.",
+      "**Was Google sieht:** Ihr Text oder Ihre Fotos werden zur KI-Verarbeitung an Server von Google übertragen. Für diesen Schritt gilt die Datenschutzerklärung von Google. Bitte entfernen oder verdecken Sie alle Angaben, die zum Verständnis nicht nötig sind – zum Beispiel **vollständige Passnummer, Personalausweisnummer, IBAN oder Kontodaten, Unterschrift, Geburtsdatum oder biometrische Daten**. Ein Foto zeigt alles, was im Bild ist: Decken Sie diese Angaben vor dem Fotografieren ab und achten Sie darauf, dass keine anderen Dokumente, Personen oder Ihre Umgebung zu sehen sind.",
+      "**EU / DSGVO:** Dieses Tool wird als kostenloses privates Projekt betrieben. Es ist kein kommerzieller Auftragsverarbeiter im Sinne von Art. 4 DSGVO. Google LLC nimmt am EU-US Data Privacy Framework teil und verwendet Standardvertragsklauseln für die Datenverarbeitung über die API.",
+    ],
+    privacyConfirmText: "Ich habe gelesen und verstanden, wie meine Daten verarbeitet werden.",
+    privacyConfirmBtn: "Verstanden – weiter",
+    privacyConfirmed: "Sie haben diesen Hinweis für diese Sitzung bestätigt.",
+
+    aboutTitle: "Was ist Amt-Easy?",
+    aboutP1: "Behördendeutsch – auch Beamtendeutsch genannt – ist selbst für Muttersprachler oft schwer verständlich. Für Menschen, die neu in Deutschland sind, kann ein einziger Brief von der Ausländerbehörde, dem Finanzamt oder dem Einwohnermeldeamt kaum zu entschlüsseln sein.",
+    aboutP2: "Amt-Easy übersetzt solche Schreiben mit KI in einfache Sprache: eine klare Zusammenfassung, Ihre Fristen, was Sie mitbringen müssen und an wen Sie sich wenden können. Verfügbar in 25 Sprachen.",
+    aboutLegal: "Rechtlicher Hinweis: Amt-Easy ist ein reines Informationsangebot. Die Zusammenfassungen werden von einer KI erstellt, stellen keine Rechtsberatung dar und ersetzen nicht die Beratung durch eine qualifizierte Fachperson. Die KI kann Texte falsch lesen – besonders auf Fotos. Prüfen Sie Daten, Beträge und Aktenzeichen immer am Originalbrief und klären Sie Fragen direkt mit der zuständigen Behörde, bevor Sie handeln. Die Betreiber übernehmen keine Haftung für Entscheidungen, die auf Grundlage dieses Tools getroffen werden.",
+  },
+};
+
+// Renders **bold** segments as <strong>.
+export function rich(text) {
+  return text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part));
+}

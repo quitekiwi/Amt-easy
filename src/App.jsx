@@ -1,5 +1,6 @@
 import { useState, useEffect, useRef } from "react";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.js?url";
+import { UI, rich } from "./i18n.jsx";
 
 const LANGUAGES = [
   { code: "English", label: "English", tag: "en" },
@@ -35,11 +36,14 @@ const EXAMPLES = [
   "Sie sind verpflichtet, sich innerhalb von 14 Tagen nach Einzug in Ihre neue Wohnung beim zuständigen Einwohnermeldeamt anzumelden. Versäumen Sie diese Frist, kann ein Bußgeld von bis zu 1.000 Euro verhängt werden.",
 ];
 
-const CHAR_LIMIT = 3000;
+// Keep CHAR_LIMIT, MAX_PHOTOS and DEFAULT_LABELS in sync with api/analyze.js.
+const CHAR_LIMIT = 12000;
+const MAX_PHOTOS = 3;
+const PHOTO_MAX_SIDE = 2000;
+const PHOTO_MAX_CHARS = 1200000; // base64 length per photo, keeps requests under Vercel's 4.5 MB limit
 
 // English defaults for the result headings. The AI returns translated
 // versions in `labels`; anything missing falls back to these.
-// Keep in sync with LABELS in api/analyze.js.
 const DEFAULT_LABELS = {
   deadlines: "Deadlines",
   actions: "What you need to do",
@@ -59,11 +63,54 @@ const DEFAULT_LABELS = {
 
 const URGENCY_COLORS = { high: "#e0806a", medium: "#d4a86a", low: "#7fb59f" };
 
+function initialUiLang() {
+  try {
+    const saved = localStorage.getItem("amt-ui-lang");
+    if (saved === "en" || saved === "de") return saved;
+  } catch {}
+  return (navigator.language || "").toLowerCase().startsWith("de") ? "de" : "en";
+}
+
+// Shrinks a photo and re-encodes it as JPEG in the browser. Re-encoding
+// drops EXIF metadata such as GPS location and camera details.
+async function preparePhoto(file) {
+  const url = URL.createObjectURL(file);
+  try {
+    const img = await new Promise((resolve, reject) => {
+      const i = new Image();
+      i.onload = () => resolve(i);
+      i.onerror = reject;
+      i.src = url;
+    });
+    const scale = Math.min(1, PHOTO_MAX_SIDE / Math.max(img.naturalWidth, img.naturalHeight));
+    const canvas = document.createElement("canvas");
+    canvas.width = Math.round(img.naturalWidth * scale);
+    canvas.height = Math.round(img.naturalHeight * scale);
+    const ctx = canvas.getContext("2d");
+    ctx.fillStyle = "#fff";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+    let quality = 0.82;
+    let dataUrl = canvas.toDataURL("image/jpeg", quality);
+    while (dataUrl.length > PHOTO_MAX_CHARS && quality > 0.4) {
+      quality -= 0.14;
+      dataUrl = canvas.toDataURL("image/jpeg", quality);
+    }
+    return { preview: dataUrl, data: dataUrl.split(",")[1], mimeType: "image/jpeg" };
+  } finally {
+    URL.revokeObjectURL(url);
+  }
+}
+
 export default function AmtEasy() {
+  const [uiLang, setUiLang] = useState(initialUiLang);
+  const t = UI[uiLang];
   const [input, setInput] = useState("");
-  const [language, setLanguage] = useState("English");
+  const [photos, setPhotos] = useState([]);
+  const [language, setLanguage] = useState(() => (initialUiLang() === "de" ? "German" : "English"));
   const [result, setResult] = useState(null);
   const [resultLang, setResultLang] = useState(LANGUAGES[0]);
+  const [resultFromPhoto, setResultFromPhoto] = useState(false);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [notice, setNotice] = useState(null);
@@ -71,18 +118,26 @@ export default function AmtEasy() {
   const [privacyConfirmed, setPrivacyConfirmed] = useState(false);
   const [pendingAction, setPendingAction] = useState(null);
   const [pdfLoading, setPdfLoading] = useState(false);
+  const [photoLoading, setPhotoLoading] = useState(false);
   const fileInputRef = useRef(null);
+  const photoInputRef = useRef(null);
   const privacyRef = useRef(null);
   const privacyHeaderRef = useRef(null);
   const resultHeadingRef = useRef(null);
 
   const charsLeft = CHAR_LIMIT - input.length;
   const overLimit = charsLeft < 0;
+  const hasContent = input.trim().length > 0 || photos.length > 0;
 
   useEffect(() => {
     document.body.style.background = "#1a2420";
     document.body.style.margin = "0";
   }, []);
+
+  useEffect(() => {
+    document.documentElement.lang = uiLang;
+    try { localStorage.setItem("amt-ui-lang", uiLang); } catch {}
+  }, [uiLang]);
 
   // Move the reader to the explanation as soon as it is ready.
   useEffect(() => {
@@ -108,6 +163,7 @@ export default function AmtEasy() {
 
   const runAction = (action) => {
     if (action === "upload") fileInputRef.current.click();
+    if (action === "photo") photoInputRef.current.click();
     if (action === "analyze") analyze();
   };
 
@@ -123,7 +179,7 @@ export default function AmtEasy() {
     e.target.value = "";
 
     if (file.type !== "application/pdf") {
-      setError("Only PDF files are supported for upload.");
+      setError(t.errOnlyPdf);
       return;
     }
 
@@ -146,23 +202,52 @@ export default function AmtEasy() {
       }
       fullText = fullText.trim();
       if (!fullText) {
-        setError("Could not extract text from this PDF. It may be a scanned image. Try copying the text manually.");
+        setError(t.errPdfNoText);
         return;
       }
       if (fullText.length > CHAR_LIMIT) {
-        setNotice("This PDF is longer than 3,000 characters, so only the first part was loaded. Deadlines are often near the end of a letter, so check the rest yourself or paste the most important part instead.");
+        setNotice(t.noticePdfLong(CHAR_LIMIT));
       }
       setInput(fullText.slice(0, CHAR_LIMIT));
     } catch (err) {
-      setError("Failed to read the PDF. Please try again or paste the text manually.");
+      setError(t.errPdfFail);
     } finally {
       setPdfLoading(false);
     }
   };
 
+  const handlePhotoChange = async (e) => {
+    const files = Array.from(e.target.files || []);
+    e.target.value = "";
+    if (!files.length) return;
+    setError(null);
+    const room = MAX_PHOTOS - photos.length;
+    if (files.length > room) setError(t.errPhotoMax(MAX_PHOTOS));
+    setPhotoLoading(true);
+    try {
+      const prepared = [];
+      for (const file of files.slice(0, Math.max(room, 0))) {
+        try {
+          prepared.push(await preparePhoto(file));
+        } catch {
+          setError(t.errPhotoFormat);
+        }
+      }
+      if (prepared.length) {
+        setResult(null);
+        setPhotos((prev) => [...prev, ...prepared].slice(0, MAX_PHOTOS));
+      }
+    } finally {
+      setPhotoLoading(false);
+    }
+  };
+
+  const removePhoto = (index) => setPhotos((prev) => prev.filter((_, i) => i !== index));
+
   const analyze = async () => {
-    if (!input.trim() || overLimit) return;
+    if (!hasContent || overLimit) return;
     const lang = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
+    const usedPhotos = photos.length > 0;
     setLoading(true);
     setError(null);
     setResult(null);
@@ -171,7 +256,11 @@ export default function AmtEasy() {
       const response = await fetch("/api/analyze", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ text: input, language }),
+        body: JSON.stringify({
+          text: input,
+          language,
+          images: photos.map((p) => ({ mimeType: p.mimeType, data: p.data })),
+        }),
       });
 
       const data = await response.json().catch(() => ({}));
@@ -189,23 +278,16 @@ export default function AmtEasy() {
         parsed = JSON.parse(clean);
       } catch {
         // Don't guess at urgency or structure the AI didn't give us.
-        parsed = {
-          unstructured: true,
-          document_type: "Document explanation",
-          urgency: null,
-          summary: clean || "Could not read the AI's answer. Please try again.",
-        };
+        parsed = { unstructured: true, urgency: null, summary: clean || null };
       }
       setResultLang(lang);
+      setResultFromPhoto(usedPhotos);
       setResult(parsed);
     } catch (err) {
-      if (err instanceof TypeError) {
-        setError("Could not reach the AI service. Check your internet connection and try again.");
-      } else if (err.status === 429) {
-        setError("The AI service is busy right now. Please wait a minute and try again.");
-      } else {
-        setError("The AI service couldn't process this document right now. Please try again in a moment.");
-      }
+      if (err instanceof TypeError) setError(t.errNet);
+      else if (err.status === 429) setError(t.errBusy);
+      else if (err.status === 413) setError(t.errTooLarge);
+      else setError(t.errGeneric);
     } finally {
       setLoading(false);
     }
@@ -219,11 +301,13 @@ export default function AmtEasy() {
   }
 
   const status = loading
-    ? "Analyzing your document…"
+    ? t.statusAnalyzing
     : pdfLoading
-    ? "Reading PDF…"
+    ? t.statusPdf
+    : photoLoading
+    ? t.statusPhoto
     : result
-    ? "Your explanation is ready."
+    ? t.statusReady
     : "";
 
   return (
@@ -682,15 +766,66 @@ export default function AmtEasy() {
         .amt-save-btn:hover:not(:disabled) { background: #7d2015; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(158,43,26,0.4); }
         .amt-error { color: #e0806a; font-size: 14px; line-height: 1.6; padding: 16px; text-align: center; }
 
+        /* ── LANGUAGE SWITCH ── */
+        .amt-header-right { display: flex; align-items: center; gap: 18px; }
+        .amt-ui-lang { display: flex; border: 1px solid rgba(214,201,176,0.16); border-radius: 6px; overflow: hidden; }
+        .amt-ui-lang-btn {
+          background: transparent;
+          border: none;
+          color: #93a397;
+          font-family: 'DM Sans', sans-serif;
+          font-size: 12px;
+          font-weight: 600;
+          letter-spacing: 1px;
+          padding: 6px 10px;
+          cursor: pointer;
+          transition: background 0.2s, color 0.2s;
+        }
+        .amt-ui-lang-btn:hover { color: #d6c9b0; }
+        .amt-ui-lang-btn.active { background: rgba(214,201,176,0.1); color: #d6c9b0; }
+        .amt-ui-lang-btn:focus-visible { outline-offset: -2px; }
+
+        /* ── EXAMPLES / PHOTOS ── */
+        .amt-example-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
+        .amt-photos { margin-top: 14px; }
+        .amt-photos-label { font-size: 13px; color: #a8b4a8; margin-bottom: 8px; }
+        .amt-photo-list { list-style: none; display: flex; gap: 10px; flex-wrap: wrap; }
+        .amt-photo { position: relative; width: 92px; height: 120px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(214,201,176,0.16); background: #161e1b; }
+        .amt-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+        .amt-photo-num {
+          position: absolute; left: 6px; bottom: 6px;
+          background: rgba(22,30,27,0.85); color: #d6c9b0;
+          font-size: 12px; font-weight: 600; border-radius: 4px; padding: 1px 6px;
+        }
+        .amt-photo-remove {
+          position: absolute; top: 4px; right: 4px;
+          width: 28px; height: 28px; border-radius: 50%;
+          background: rgba(22,30,27,0.88); color: #d6c9b0;
+          border: 1px solid rgba(214,201,176,0.2);
+          font-size: 12px; cursor: pointer;
+          display: flex; align-items: center; justify-content: center;
+        }
+        .amt-photo-remove:hover { background: #9e2b1a; }
+        .amt-photos-hint { font-size: 12px; color: #93a397; line-height: 1.6; margin-top: 8px; }
+
+        /* ── HELP ── */
+        .amt-help-list { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+        .amt-help-item { font-size: 14px; color: #c4cbbf; line-height: 1.6; display: flex; flex-direction: column; gap: 2px; }
+        .amt-help-item strong { color: #d6c9b0; font-weight: 600; }
+        .amt-help-link { color: #e0806a; font-size: 13px; text-underline-offset: 3px; align-self: flex-start; }
+        .amt-help-link:hover { color: #f0a08a; }
+
         /* ── TOUCH ── */
         @media (pointer: coarse) {
-          .amt-upload-btn, .amt-example-btn, .amt-lang-native, .amt-analyze-btn, .amt-privacy-confirm-btn, .amt-save-btn { min-height: 44px; }
+          .amt-upload-btn, .amt-example-btn, .amt-lang-native, .amt-analyze-btn, .amt-privacy-confirm-btn, .amt-save-btn, .amt-ui-lang-btn { min-height: 44px; }
+          .amt-photo-remove { width: 36px; height: 36px; }
           .amt-privacy-header { min-height: 48px; }
         }
 
         /* ── RESPONSIVE ── */
         @media (max-width: 600px) {
-          .amt-header { padding: 18px 20px; }
+          .amt-header { padding: 14px 20px; }
+          .amt-header-tag { display: none; }
           .amt-hero { padding: 36px 20px 28px; }
           .amt-about { padding: 0 20px 60px; }
           .amt-privacy-wrap { padding: 0 20px 12px; }
@@ -738,6 +873,8 @@ export default function AmtEasy() {
           .amt-check-input:checked + .amt-check-box { color: #fff; }
           .amt-urgency-pill { border: 1px solid currentColor; }
           .amt-unstructured-note { color: #6a5020; }
+          .amt-help-item, .amt-help-item strong { color: #2a2a2a; }
+          .amt-help-link { color: #1e2a28; text-decoration: none; }
           .amt-print-foot { margin-top: 24px; padding-top: 8px; border-top: 1px solid #c9c2b4; font-size: 10px; color: #4a5a52; }
         }
       `}</style>
@@ -750,21 +887,38 @@ export default function AmtEasy() {
           <span className="amt-logo-text">Amt-Easy</span>
           <span className="amt-logo-dot" />
         </div>
-        <span className="amt-header-tag">Free · No signup</span>
+        <div className="amt-header-right">
+          <span className="amt-header-tag">{t.headerTag}</span>
+          <div className="amt-ui-lang" role="group" aria-label={t.switchLabel}>
+            {[["en", "EN", "English"], ["de", "DE", "Deutsch"]].map(([code, short, name]) => (
+              <button
+                key={code}
+                type="button"
+                lang={code}
+                className={"amt-ui-lang-btn" + (uiLang === code ? " active" : "")}
+                aria-pressed={uiLang === code}
+                aria-label={name}
+                onClick={() => setUiLang(code)}
+              >
+                {short}
+              </button>
+            ))}
+          </div>
+        </div>
       </header>
 
       {/* Hero */}
       <div className="amt-hero">
-        <p className="amt-eyebrow">German Document Interpreter</p>
-        <h1 className="amt-title">Cut through the<br /><em>Beamtendeutsch.</em></h1>
-        <p className="amt-subtitle">Paste any German government letter or notice. Get a plain-language summary, your deadlines, and a checklist in your language.</p>
+        <p className="amt-eyebrow">{t.eyebrow}</p>
+        <h1 className="amt-title">{t.titleA}<br /><em lang="de">{t.titleB}</em></h1>
+        <p className="amt-subtitle">{t.subtitle}</p>
       </div>
 
       {/* Main */}
       <div className="amt-main">
         <div className="amt-card amt-input-card">
           <div className="amt-lang-row">
-            <label className="amt-lang-label" htmlFor="amt-lang">Explain in</label>
+            <label className="amt-lang-label" htmlFor="amt-lang">{t.explainIn}</label>
             <div className="amt-lang-select">
               <select
                 id="amt-lang"
@@ -779,12 +933,12 @@ export default function AmtEasy() {
               <span className="amt-lang-chevron" aria-hidden="true">&#9660;</span>
             </div>
           </div>
-          <label className="amt-card-label" htmlFor="amt-doc-text">Paste German document text</label>
+          <label className="amt-card-label" htmlFor="amt-doc-text">{t.pasteLabel}</label>
           <textarea
             id="amt-doc-text"
             className="amt-textarea"
             lang="de"
-            placeholder="Paste the text from your German letter here..."
+            placeholder={t.placeholder}
             value={input}
             aria-describedby="amt-char-count"
             onChange={(e) => setInput(e.target.value.slice(0, CHAR_LIMIT + 50))}
@@ -793,39 +947,64 @@ export default function AmtEasy() {
             }}
             style={{ borderColor: overLimit ? "rgba(224,128,106,0.7)" : undefined }}
           />
-          <p id="amt-char-count" className="amt-char-count" style={{ color: overLimit ? "#e0806a" : charsLeft < 300 ? "#d4a86a" : "#93a397" }}>
-            {overLimit ? Math.abs(charsLeft) + " characters over limit" : charsLeft + " characters remaining"}
+          <p id="amt-char-count" className="amt-char-count" style={{ color: overLimit ? "#e0806a" : charsLeft < 500 ? "#d4a86a" : "#93a397" }}>
+            {overLimit ? t.charsOver(Math.abs(charsLeft)) : t.charsRemaining(charsLeft)}
           </p>
 
           <div className="amt-upload-row">
+            <button type="button" className="amt-upload-btn" onClick={() => requirePrivacy("photo")} disabled={photoLoading || photos.length >= MAX_PHOTOS}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z" />
+                <circle cx="12" cy="13" r="4" />
+              </svg>
+              {t.takePhoto}
+            </button>
             <button type="button" className="amt-upload-btn" onClick={() => requirePrivacy("upload")} disabled={pdfLoading}>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
                 <polyline points="17 8 12 3 7 8" />
                 <line x1="12" y1="3" x2="12" y2="15" />
               </svg>
-              Upload PDF
+              {t.uploadPdf}
             </button>
-            <span className="amt-upload-divider">or try an example:</span>
+          </div>
+          <div className="amt-example-row">
+            <span className="amt-upload-divider">{t.orExample}</span>
             <div className="amt-examples">
-              {["Residence Permit", "Tax ID", "Anmeldung"].map((label, i) => (
+              {t.examples.map((label, i) => (
                 <button type="button" key={i} className="amt-example-btn" onClick={() => { setInput(EXAMPLES[i]); setNotice(null); }}>{label}</button>
               ))}
             </div>
           </div>
 
+          {photos.length > 0 && (
+            <div className="amt-photos">
+              <p className="amt-photos-label">{t.photosLabel(photos.length, MAX_PHOTOS)}</p>
+              <ul className="amt-photo-list">
+                {photos.map((p, i) => (
+                  <li key={i} className="amt-photo">
+                    <img src={p.preview} alt={t.photoAlt(i + 1)} />
+                    <span className="amt-photo-num" aria-hidden="true">{i + 1}</span>
+                    <button type="button" className="amt-photo-remove" aria-label={t.removePhoto(i + 1)} onClick={() => removePhoto(i)}>&#10005;</button>
+                  </li>
+                ))}
+              </ul>
+              <p className="amt-photos-hint">{t.photoHint}</p>
+            </div>
+          )}
+
           {notice && <p className="amt-notice">{notice}</p>}
 
           <details className="amt-scan-tips">
-            <summary className="amt-scan-tips-title">No PDF? How to scan your letter</summary>
-            <p className="amt-scan-tip"><strong>iPhone:</strong> Open Notes &#8594; tap the camera icon &#8594; Scan Documents &#8594; save to Files &#8594; upload here.</p>
-            <p className="amt-scan-tip"><strong>Android:</strong> Open Google Drive &#8594; tap + &#8594; Scan &#8594; save as PDF &#8594; upload here.</p>
+            <summary className="amt-scan-tips-title">{t.scanTitle}</summary>
+            <p className="amt-scan-tip"><strong>iPhone:</strong> {t.scanIphone}</p>
+            <p className="amt-scan-tip"><strong>Android:</strong> {t.scanAndroid}</p>
           </details>
 
-          {pdfLoading && (
+          {(pdfLoading || photoLoading) && (
             <div className="amt-pdf-loading">
               <div className="amt-spinner" style={{ width: 14, height: 14 }} />
-              <span>Reading PDF...</span>
+              <span>{pdfLoading ? t.readingPdf : t.preparingPhoto}</span>
             </div>
           )}
 
@@ -836,18 +1015,26 @@ export default function AmtEasy() {
             style={{ display: "none" }}
             onChange={handleFileChange}
           />
+          <input
+            ref={photoInputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            style={{ display: "none" }}
+            onChange={handlePhotoChange}
+          />
 
           <div className="amt-controls">
-            <button type="button" className="amt-analyze-btn" onClick={() => requirePrivacy("analyze")} disabled={loading || !input.trim() || overLimit}>
-              {loading ? "Analyzing..." : "Analyze Document"}
+            <button type="button" className="amt-analyze-btn" onClick={() => requirePrivacy("analyze")} disabled={loading || photoLoading || !hasContent || overLimit}>
+              {loading ? t.analyzing : t.analyze}
             </button>
           </div>
-          <p className="amt-input-disclaimer">Educational tool only — not legal advice (Rechtsberatung).</p>
+          <p className="amt-input-disclaimer">{t.inputDisclaimer}</p>
         </div>
 
         {loading && (
           <div className="amt-card amt-loading-card">
-            <div className="amt-loading"><div className="amt-spinner" /><span>Reading your document...</span></div>
+            <div className="amt-loading"><div className="amt-spinner" /><span>{t.loading}</span></div>
           </div>
         )}
 
@@ -855,23 +1042,24 @@ export default function AmtEasy() {
 
         {result && !loading && (
           <div className="amt-card amt-result" lang={resultLang.tag} dir={resultLang.rtl ? "rtl" : "ltr"}>
-            <div className="amt-print-only amt-print-head" lang="en" dir="ltr">
+            <div className="amt-print-only amt-print-head" lang={uiLang} dir="ltr">
               <span className="amt-print-brand">Amt-Easy<span>.</span></span>
               <span className="amt-print-date">{new Date().toLocaleDateString(resultLang.tag, { day: "2-digit", month: "long", year: "numeric" })}</span>
             </div>
             <div className="amt-result-header">
-              <h2 className="amt-doc-type" ref={resultHeadingRef} tabIndex={-1}>{result.document_type}</h2>
+              <h2 className="amt-doc-type" ref={resultHeadingRef} tabIndex={-1}>{result.document_type || t.unstructuredTitle}</h2>
               {result.urgency && URGENCY_COLORS[result.urgency] && (
                 <span className="amt-urgency-pill" style={{ background: URGENCY_COLORS[result.urgency] + "22", color: URGENCY_COLORS[result.urgency] }}>
                   {labels["urgency_" + result.urgency]}
                 </span>
               )}
             </div>
-            <p className="amt-disclaimer-top" lang="en" dir="ltr">Educational tool only. Not legal advice (Rechtsberatung). Always verify with the relevant authority.</p>
+            <p className="amt-disclaimer-top" lang={uiLang} dir="ltr">{t.disclaimerTop}</p>
+            {resultFromPhoto && <p className="amt-unstructured-note" lang={uiLang} dir="ltr">{t.photoNote}</p>}
             {result.unstructured && (
-              <p className="amt-unstructured-note" lang="en" dir="ltr">We couldn't sort this letter into deadlines and checklists, so here is the explanation as the AI wrote it. Read it carefully and check the original letter for dates.</p>
+              <p className="amt-unstructured-note" lang={uiLang} dir="ltr">{t.unstructuredNote}</p>
             )}
-            {result.summary && <p className="amt-summary">{result.summary}</p>}
+            {(result.summary || result.unstructured) && <p className="amt-summary">{result.summary || t.parseFail}</p>}
             {result.deadlines?.length > 0 && (
               <div className="amt-section">
                 <h3 className="amt-section-title">{labels.deadlines}</h3>
@@ -917,7 +1105,22 @@ export default function AmtEasy() {
                 ))}
               </div>
             )}
-            <p className="amt-print-only amt-print-foot" lang="en" dir="ltr">Amt-Easy — Educational tool only. Not legal advice (Rechtsberatung). Always verify with the relevant authority.</p>
+            <div className="amt-section amt-help" lang={uiLang} dir="ltr">
+              <h3 className="amt-section-title">{t.helpTitle}</h3>
+              <ul className="amt-help-list">
+                {t.help.map((item, i) => (
+                  <li key={i} className="amt-help-item">
+                    <span>{rich(item.text)}</span>
+                    {item.link && (
+                      <a className="amt-help-link" href={item.link} target="_blank" rel="noopener noreferrer">
+                        {item.linkLabel}<span className="amt-print-only"> ({item.link})</span>
+                      </a>
+                    )}
+                  </li>
+                ))}
+              </ul>
+            </div>
+            <p className="amt-print-only amt-print-foot" lang={uiLang} dir="ltr">{t.printFoot}</p>
             <button type="button" className="amt-save-btn" onClick={() => window.print()}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -945,27 +1148,24 @@ export default function AmtEasy() {
               <svg className="amt-privacy-shield" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
               </svg>
-              <span className="amt-privacy-label">Privacy &amp; Data Notice</span>
+              <span className="amt-privacy-label">{t.privacyLabel}</span>
             </span>
             <span className={"amt-privacy-chevron" + (privacyOpen ? " open" : "")} aria-hidden="true">&#9660;</span>
           </button>
           {privacyOpen && (
             <div className="amt-privacy-body" id="amt-privacy-body">
-              <p><strong>What we collect:</strong> Nothing. Amt-Easy does not store, collect, or retain any documents or personal data you submit. No accounts, no cookies, no analytics.</p>
-              <p><strong>How your document is processed:</strong> The text you submit passes through Amt-Easy's server (hosted on Vercel), which does not store or log it, and is sent in real time to Google Gemini AI (Google LLC) solely to generate your summary. Amt-Easy never sees or saves this content after your session ends. When you close the tab, it is gone.</p>
-              <p><strong>What Google sees:</strong> Your document text is transmitted to Google's servers for AI processing. Google's Privacy Policy applies to that step. We recommend removing or covering any information not necessary for understanding the document — such as your <strong>full passport number, national ID number, IBAN or bank account details, signature, date of birth, or biometric data</strong>. If you are scanning a paper letter, physically cover or black out these details before scanning.</p>
-              <p><strong>EU / GDPR:</strong> This tool is operated as a free personal project. It is not a commercial data processor under GDPR Article 4. Google LLC participates in the EU-US Data Privacy Framework and maintains standard contractual clauses for API data processing.</p>
+              {t.privacy.map((para, i) => <p key={i}>{rich(para)}</p>)}
               {!privacyConfirmed ? (
                 <div className="amt-privacy-confirm">
-                  <span className="amt-privacy-confirm-text">I have read and understood how my data is handled.</span>
+                  <span className="amt-privacy-confirm-text">{t.privacyConfirmText}</span>
                   <button type="button" className="amt-privacy-confirm-btn" onClick={confirmPrivacy}>
-                    I understand — continue
+                    {t.privacyConfirmBtn}
                   </button>
                 </div>
               ) : (
                 <div className="amt-privacy-confirmed">
                   <span aria-hidden="true">&#10003;</span>
-                  <span>You have acknowledged this notice for this session.</span>
+                  <span>{t.privacyConfirmed}</span>
                 </div>
               )}
             </div>
@@ -976,10 +1176,10 @@ export default function AmtEasy() {
       {/* About */}
       <div className="amt-about">
         <div className="amt-about-card">
-          <h2 className="amt-about-title">What is Amt-Easy?</h2>
-          <p className="amt-about-text">German bureaucratic language — known as Beamtendeutsch — is notoriously dense, even for native speakers. For international residents, a single letter from the Ausländerbehörde, Finanzamt, or Einwohnermeldeamt can feel impossible to decode.</p>
-          <p className="amt-about-text">Amt-Easy uses AI to instantly translate these documents into plain language — giving you a clear summary, your deadlines, what you need to bring, and who to contact. Available in 25 languages.</p>
-          <p className="amt-about-legal">Legal notice: Amt-Easy is an educational tool only. Summaries are AI-generated and do not constitute legal advice (Rechtsberatung) or replace consultation with a qualified professional. Always verify directly with the relevant authority before acting. The creators accept no liability for decisions made based on this tool's output.</p>
+          <h2 className="amt-about-title">{t.aboutTitle}</h2>
+          <p className="amt-about-text">{t.aboutP1}</p>
+          <p className="amt-about-text">{t.aboutP2}</p>
+          <p className="amt-about-legal">{t.aboutLegal}</p>
         </div>
       </div>
 

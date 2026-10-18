@@ -18,10 +18,13 @@ A focused, free, no-account interpreter for one specific pain — Beamtendeutsch
 Long-term goal: be useful and trustworthy enough to be adopted or acquired by German government bodies, authorities, or organizations serving residents. Credibility with that audience matters.
 
 ## Operating Context
-- Input: pasted letter text, or PDF upload (text extracted in the browser via pdf.js). Scanned images are not supported; the page explains how to scan to PDF on iPhone/Android.
+- Input: pasted letter text (up to 12,000 characters), PDF upload (text extracted in the browser via pdf.js), or up to 3 photos of a paper letter (one per page). Photos are shrunk and re-encoded to JPEG in the browser, which strips EXIF/GPS metadata, before being sent.
 - Example letters are offered as one-click samples.
 - Output can be exported as a PDF (jsPDF).
-- Analysis currently runs through Google Gemini (called from the browser). `api/analyze.js` is an unused, currently malformed serverless handler for Anthropic's API.
+- Analysis runs through Google Gemini (gemini-3.5-flash-lite) via a Vercel serverless function (`api/analyze.js`) that holds the API key and builds the prompt. Nothing is stored or logged except Google's error reason.
+- Interface available in English and German (EN/DE switch); explanations in 25 languages.
+- Results end with a "Need help?" section pointing to free advice services (MBE/BAMF-NAvI, mbeon, Jugendmigrationsdienste, Beratungshilfe), checked October 2026.
+- Gemini free tier is in use. Google's terms require paid services for apps offered to EEA/UK/CH users, so a paid tier is needed before public launch.
 
 ## Capabilities and Constraints
 - Privacy is non-negotiable: EU/GDPR context. No accounts, no cookies, no analytics, nothing stored. A privacy & data notice must be acknowledged before use and must stay accurate to whichever AI provider actually processes the text.
