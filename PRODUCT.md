@@ -10,7 +10,7 @@ web
 Anyone living in Germany who receives an official letter they can't easily understand — no single priority group. This spans newcomers with little German and long-term residents who still find Beamtendeutsch dense. Visitors arrive on phones and computers about equally, often holding a letter that may carry a deadline.
 
 ## Product Purpose
-Amt-Easy turns German government letters and notices (Ausländerbehörde, Finanzamt, Einwohnermeldeamt, etc.) into plain language. A visitor pastes text or uploads a PDF and gets a short summary, urgency, deadlines, an action checklist, documents to bring, who to contact, and important reference numbers — in their chosen language (25 available). Success is a visitor who knows what the letter means and what to do next, without needing to read German bureaucratic prose.
+Amt-Easy turns German government letters and notices (Ausländerbehörde, Finanzamt, Einwohnermeldeamt, etc.) into plain language. A visitor pastes text or uploads a PDF and gets a short summary, urgency, deadlines, an action checklist, documents to bring, who to contact, and important reference numbers — in their chosen language (27 available). Success is a visitor who knows what the letter means and what to do next, without needing to read German bureaucratic prose.
 
 ## Positioning
 A focused, free, no-account interpreter for one specific pain — Beamtendeutsch — built around privacy and clear structured output (deadlines, checklist, documents, contacts) rather than a general-purpose chatbot answer.
@@ -20,9 +20,10 @@ Long-term goal: be useful and trustworthy enough to be adopted or acquired by Ge
 ## Operating Context
 - Input: pasted letter text (up to 12,000 characters), PDF upload (text extracted in the browser via pdf.js), or up to 3 photos of a paper letter (one per page). Photos are shrunk and re-encoded to JPEG in the browser, which strips EXIF/GPS metadata, before being sent.
 - Example letters are offered as one-click samples.
-- Output can be exported as a PDF (jsPDF).
-- Analysis runs through Google Gemini (gemini-3.5-flash-lite) via a Vercel serverless function (`api/analyze.js`) that holds the API key and builds the prompt. Nothing is stored or logged except Google's error reason.
-- Interface available in English and German (EN/DE switch); explanations in 25 languages.
+- Output can be saved as a PDF through the browser's print dialog (works for every script).
+- Analysis runs through Google Gemini (gemini-3.5-flash-lite) via a Vercel serverless function (`api/analyze.js`, region fra1 Frankfurt) that holds the API key and builds the prompt. Nothing is stored or logged except Google's error reason.
+- First visit shows a language picker; one choice sets the whole interface and the explanation language (27 languages incl. Dari and Pashto, added for Afghan users). Right-to-left layout for Arabic, Persian, Dari, Pashto. Translations live in `src/locales/*.json`; all except English and German are machine translations by Claude and need native-speaker review (lowest confidence: Tigrinya, Amharic, Somali, Kurdish, Pashto). Privacy and legal text show a "German version is legally binding" toggle in translated languages.
+- The only thing stored is the visitor's language choice, in their own browser (localStorage).
 - Results end with a "Need help?" section pointing to free advice services (MBE/BAMF-NAvI, mbeon, Jugendmigrationsdienste, Beratungshilfe), checked October 2026.
 - Gemini free tier is in use. Google's terms require paid services for apps offered to EEA/UK/CH users, so a paid tier is needed before public launch.
 

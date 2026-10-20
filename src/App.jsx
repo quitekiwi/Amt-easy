@@ -1,6 +1,19 @@
 import { useState, useEffect, useRef } from "react";
 import pdfWorkerUrl from "pdfjs-dist/build/pdf.worker.min.js?url";
-import { UI, rich } from "./i18n.jsx";
+import EN from "./locales/en.json";
+import DE from "./locales/de.json";
+
+// Other languages load only when chosen, so the page stays small.
+const LOCALE_FILES = import.meta.glob(["./locales/*.json", "!./locales/en.json", "!./locales/de.json"]);
+
+// Fills {n}-style placeholders.
+const fmt = (str, vars) => str.replace(/\{(\w+)\}/g, (_, k) => vars[k]);
+
+// Renders **bold** segments as <strong>.
+const rich = (text) => text.split(/\*\*(.+?)\*\*/g).map((part, i) => (i % 2 ? <strong key={i}>{part}</strong> : part));
+
+// Merges a translation over English so a missing string never shows blank.
+const withFallback = (loc) => ({ ...EN, ...loc, labels: { ...EN.labels, ...(loc.labels || {}) } });
 
 const LANGUAGES = [
   { code: "English", label: "English", tag: "en" },
@@ -16,7 +29,9 @@ const LANGUAGES = [
   { code: "Italian", label: "Italiano", tag: "it" },
   { code: "Portuguese", label: "Português", tag: "pt" },
   { code: "Persian", label: "فارسی", tag: "fa", rtl: true },
-  { code: "Kurdish (Kurmanji)", label: "Kurdî", tag: "kmr" },
+  { code: "Dari", label: "دری", tag: "fa-AF", rtl: true, file: "prs" },
+  { code: "Pashto", label: "پښتو", tag: "ps", rtl: true },
+  { code: "Kurdish (Kurmanji)", label: "Kurdî (Kurmancî)", tag: "kmr" },
   { code: "Serbian", label: "Српски", tag: "sr" },
   { code: "Croatian", label: "Hrvatski", tag: "hr" },
   { code: "Bosnian", label: "Bosanski", tag: "bs" },
@@ -36,39 +51,37 @@ const EXAMPLES = [
   "Sie sind verpflichtet, sich innerhalb von 14 Tagen nach Einzug in Ihre neue Wohnung beim zuständigen Einwohnermeldeamt anzumelden. Versäumen Sie diese Frist, kann ein Bußgeld von bis zu 1.000 Euro verhängt werden.",
 ];
 
-// Keep CHAR_LIMIT, MAX_PHOTOS and DEFAULT_LABELS in sync with api/analyze.js.
+// Keep CHAR_LIMIT and MAX_PHOTOS in sync with api/analyze.js.
 const CHAR_LIMIT = 12000;
 const MAX_PHOTOS = 3;
 const PHOTO_MAX_SIDE = 2000;
 const PHOTO_MAX_CHARS = 1200000; // base64 length per photo, keeps requests under Vercel's 4.5 MB limit
 
-// English defaults for the result headings. The AI returns translated
-// versions in `labels`; anything missing falls back to these.
-const DEFAULT_LABELS = {
-  deadlines: "Deadlines",
-  actions: "What you need to do",
-  documents: "Documents to bring",
-  appointment: "Appointment details",
-  office: "Office",
-  address: "Address",
-  room: "Room",
-  time: "Time",
-  numbers: "Important reference numbers",
-  urgency_high: "Urgent",
-  urgency_medium: "Moderate",
-  urgency_low: "Low priority",
-  no_date: "No date",
-  save_pdf: "Save as PDF",
-};
+const HELP_LINKS = [
+  null,
+  "https://bamf-navi.bamf.de/de/Themen/Migrationsberatung/",
+  "https://www.mbeon.de/",
+  "https://www.jugendmigrationsdienste.de/",
+  "https://service.justiz.de/beratungshilfe",
+];
 
 const URGENCY_COLORS = { high: "#e0806a", medium: "#d4a86a", low: "#7fb59f" };
 
-function initialUiLang() {
+const findLang = (code) => LANGUAGES.find((l) => l.code === code);
+
+function savedLanguage() {
   try {
-    const saved = localStorage.getItem("amt-ui-lang");
-    if (saved === "en" || saved === "de") return saved;
+    const saved = localStorage.getItem("amt-lang");
+    if (findLang(saved)) return saved;
   } catch {}
-  return (navigator.language || "").toLowerCase().startsWith("de") ? "de" : "en";
+  return null;
+}
+
+// The browser's language, offered first in the picker.
+function suggestedLanguage() {
+  const nav = (navigator.language || "").toLowerCase();
+  const hit = LANGUAGES.find((l) => nav === l.tag.toLowerCase()) || LANGUAGES.find((l) => nav.split("-")[0] === l.tag.split("-")[0]);
+  return hit ? hit.code : null;
 }
 
 // Shrinks a photo and re-encodes it as JPEG in the browser. Re-encoding
@@ -103,11 +116,17 @@ async function preparePhoto(file) {
 }
 
 export default function AmtEasy() {
-  const [uiLang, setUiLang] = useState(initialUiLang);
-  const t = UI[uiLang];
+  // One choice sets the whole site AND the language of the explanation.
+  const [language, setLanguage] = useState(savedLanguage);
+  const [pickerOpen, setPickerOpen] = useState(false);
+  const [strings, setStrings] = useState(() => (savedLanguage() === "German" ? withFallback(DE) : EN));
+  const [showGermanLegal, setShowGermanLegal] = useState(false);
+  const lang = findLang(language) || LANGUAGES[0];
+  const t = strings;
+  const legal = showGermanLegal ? withFallback(DE) : t;
+  const isTranslated = lang.tag !== "en" && lang.tag !== "de";
   const [input, setInput] = useState("");
   const [photos, setPhotos] = useState([]);
-  const [language, setLanguage] = useState(() => (initialUiLang() === "de" ? "German" : "English"));
   const [result, setResult] = useState(null);
   const [resultLang, setResultLang] = useState(LANGUAGES[0]);
   const [resultFromPhoto, setResultFromPhoto] = useState(false);
@@ -135,9 +154,28 @@ export default function AmtEasy() {
   }, []);
 
   useEffect(() => {
-    document.documentElement.lang = uiLang;
-    try { localStorage.setItem("amt-ui-lang", uiLang); } catch {}
-  }, [uiLang]);
+    document.documentElement.lang = lang.tag;
+    document.documentElement.dir = lang.rtl ? "rtl" : "ltr";
+    setShowGermanLegal(false);
+    if (!language) return;
+    try { localStorage.setItem("amt-lang", language); } catch {}
+    let cancelled = false;
+    if (lang.tag === "en") setStrings(EN);
+    else if (lang.tag === "de") setStrings(withFallback(DE));
+    else {
+      const load = LOCALE_FILES["./locales/" + (lang.file || lang.tag) + ".json"];
+      if (load) load().then((m) => { if (!cancelled) setStrings(withFallback(m.default)); });
+      else setStrings(EN);
+    }
+    return () => { cancelled = true; };
+  }, [language]);
+
+  const chooseLanguage = (code) => {
+    setLanguage(code);
+    setPickerOpen(false);
+    setResult(null);
+    window.scrollTo(0, 0);
+  };
 
   // Move the reader to the explanation as soon as it is ready.
   useEffect(() => {
@@ -206,7 +244,7 @@ export default function AmtEasy() {
         return;
       }
       if (fullText.length > CHAR_LIMIT) {
-        setNotice(t.noticePdfLong(CHAR_LIMIT));
+        setNotice(fmt(t.noticePdfLong, { limit: CHAR_LIMIT.toLocaleString(lang.tag) }));
       }
       setInput(fullText.slice(0, CHAR_LIMIT));
     } catch (err) {
@@ -222,7 +260,7 @@ export default function AmtEasy() {
     if (!files.length) return;
     setError(null);
     const room = MAX_PHOTOS - photos.length;
-    if (files.length > room) setError(t.errPhotoMax(MAX_PHOTOS));
+    if (files.length > room) setError(fmt(t.errPhotoMax, { max: MAX_PHOTOS }));
     setPhotoLoading(true);
     try {
       const prepared = [];
@@ -246,7 +284,6 @@ export default function AmtEasy() {
 
   const analyze = async () => {
     if (!hasContent || overLimit) return;
-    const lang = LANGUAGES.find((l) => l.code === language) || LANGUAGES[0];
     const usedPhotos = photos.length > 0;
     setLoading(true);
     setError(null);
@@ -293,12 +330,7 @@ export default function AmtEasy() {
     }
   };
 
-  const labels = { ...DEFAULT_LABELS };
-  if (result?.labels && typeof result.labels === "object") {
-    for (const key of Object.keys(DEFAULT_LABELS)) {
-      if (typeof result.labels[key] === "string" && result.labels[key].trim()) labels[key] = result.labels[key];
-    }
-  }
+  const labels = t.labels;
 
   const status = loading
     ? t.statusAnalyzing
@@ -584,7 +616,7 @@ export default function AmtEasy() {
           padding: 12px 14px;
           background: #161e1b;
           border-radius: 8px;
-          border-left: 2px solid rgba(214,201,176,0.08);
+          border-inline-start: 2px solid rgba(214,201,176,0.08);
         }
         .amt-scan-tips-title {
           cursor: pointer;
@@ -617,33 +649,6 @@ export default function AmtEasy() {
 
         /* ── CONTROLS ── */
         .amt-controls { display: flex; gap: 12px; align-items: center; margin-top: 16px; flex-wrap: wrap; }
-        .amt-lang-row { display: flex; align-items: center; gap: 12px; margin-bottom: 18px; flex-wrap: wrap; }
-        .amt-lang-label { font-size: 14px; color: #a8b4a8; }
-        .amt-lang-select { position: relative; }
-        .amt-lang-native {
-          appearance: none;
-          -webkit-appearance: none;
-          background: #161e1b;
-          border: 1px solid rgba(214,201,176,0.08);
-          border-radius: 8px;
-          color: #d6c9b0;
-          font-family: 'DM Sans', sans-serif;
-          font-size: 13px;
-          padding: 10px 36px 10px 16px;
-          cursor: pointer;
-          transition: border-color 0.2s;
-        }
-        .amt-lang-native:hover { border-color: rgba(214,201,176,0.18); }
-        .amt-lang-native option { background: #22302b; color: #d6c9b0; }
-        .amt-lang-chevron {
-          position: absolute;
-          right: 14px;
-          top: 50%;
-          transform: translateY(-50%);
-          color: #93a397;
-          font-size: 10px;
-          pointer-events: none;
-        }
         .amt-analyze-btn {
           background: #9e2b1a;
           color: #e8dcc8;
@@ -767,24 +772,58 @@ export default function AmtEasy() {
         .amt-save-btn:hover:not(:disabled) { background: #7d2015; transform: translateY(-1px); box-shadow: 0 4px 14px rgba(158,43,26,0.4); }
         .amt-error { color: #e0806a; font-size: 14px; line-height: 1.6; padding: 16px; text-align: center; }
 
-        /* ── LANGUAGE SWITCH ── */
+        /* ── LANGUAGE BUTTON + PICKER ── */
         .amt-header-right { display: flex; align-items: center; gap: 18px; }
-        .amt-ui-lang { display: flex; border: 1px solid rgba(214,201,176,0.16); border-radius: 6px; overflow: hidden; }
-        .amt-ui-lang-btn {
+        .amt-lang-btn {
+          display: flex; align-items: center; gap: 8px;
           background: transparent;
-          border: none;
-          color: #93a397;
+          border: 1px solid rgba(214,201,176,0.16);
+          border-radius: 6px;
+          color: #d6c9b0;
           font-family: 'DM Sans', sans-serif;
-          font-size: 12px;
-          font-weight: 600;
-          letter-spacing: 1px;
-          padding: 6px 10px;
+          font-size: 13px;
+          padding: 6px 12px;
           cursor: pointer;
-          transition: background 0.2s, color 0.2s;
+          transition: border-color 0.2s, background 0.2s;
         }
-        .amt-ui-lang-btn:hover { color: #d6c9b0; }
-        .amt-ui-lang-btn.active { background: rgba(214,201,176,0.1); color: #d6c9b0; }
-        .amt-ui-lang-btn:focus-visible { outline-offset: -2px; }
+        .amt-lang-btn:hover { border-color: rgba(214,201,176,0.32); background: rgba(214,201,176,0.05); }
+        .amt-lang-btn svg { color: #93a397; }
+        .amt-picker { max-width: 760px; margin: 0 auto; padding: 48px 40px 80px; }
+        .amt-picker-title { font-family: 'DM Serif Display', serif; font-weight: 400; font-size: clamp(28px, 4.5vw, 40px); color: #d6c9b0; line-height: 1.1; }
+        .amt-picker-title:focus { outline: none; }
+        .amt-picker-sub { font-size: 15px; color: #a8b4a8; line-height: 1.8; margin: 12px 0 28px; }
+        .amt-picker-grid { list-style: none; display: grid; grid-template-columns: repeat(auto-fill, minmax(160px, 1fr)); gap: 10px; }
+        .amt-picker-btn {
+          width: 100%; min-height: 64px;
+          display: flex; flex-direction: column; align-items: flex-start; justify-content: center; gap: 2px;
+          background: linear-gradient(160deg, #22302b 0%, #1e2c27 100%);
+          border: 1px solid rgba(214,201,176,0.12);
+          border-radius: 10px;
+          padding: 10px 16px;
+          color: #d6c9b0;
+          font-family: 'DM Sans', sans-serif;
+          cursor: pointer;
+          text-align: start;
+          transition: border-color 0.2s, background 0.2s;
+        }
+        .amt-picker-btn:hover { border-color: rgba(224,128,106,0.6); }
+        .amt-picker-btn.current, .amt-picker-btn.suggested { border-color: #c4513a; }
+        .amt-picker-native { font-size: 18px; font-weight: 500; }
+        .amt-picker-native[dir="rtl"] { align-self: stretch; text-align: right; }
+        .amt-picker-en { font-size: 12px; color: #93a397; }
+        .amt-picker-close {
+          margin-top: 28px;
+          background: transparent; border: none;
+          color: #e0806a; font-family: 'DM Sans', sans-serif; font-size: 14px;
+          cursor: pointer; padding: 8px 0;
+        }
+        [dir="rtl"] .amt-picker-back { display: inline-block; transform: scaleX(-1); }
+        .amt-legal-toggle { font-size: 12px; color: #d4a86a; line-height: 1.6; margin-top: 14px; }
+        .amt-link-btn {
+          background: none; border: none; padding: 0;
+          color: #e0806a; font: inherit; text-decoration: underline; text-underline-offset: 3px;
+          cursor: pointer;
+        }
 
         /* ── EXAMPLES / PHOTOS ── */
         .amt-example-row { display: flex; align-items: center; gap: 12px; margin-top: 12px; flex-wrap: wrap; }
@@ -794,12 +833,12 @@ export default function AmtEasy() {
         .amt-photo { position: relative; width: 92px; height: 120px; border-radius: 6px; overflow: hidden; border: 1px solid rgba(214,201,176,0.16); background: #161e1b; }
         .amt-photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
         .amt-photo-num {
-          position: absolute; left: 6px; bottom: 6px;
+          position: absolute; inset-inline-start: 6px; bottom: 6px;
           background: rgba(22,30,27,0.85); color: #d6c9b0;
           font-size: 12px; font-weight: 600; border-radius: 4px; padding: 1px 6px;
         }
         .amt-photo-remove {
-          position: absolute; top: 4px; right: 4px;
+          position: absolute; top: 4px; inset-inline-end: 4px;
           width: 28px; height: 28px; border-radius: 50%;
           background: rgba(22,30,27,0.88); color: #d6c9b0;
           border: 1px solid rgba(214,201,176,0.2);
@@ -818,9 +857,9 @@ export default function AmtEasy() {
 
         /* ── TOUCH ── */
         @media (pointer: coarse) {
-          .amt-upload-btn, .amt-example-btn, .amt-lang-native, .amt-analyze-btn, .amt-privacy-confirm-btn, .amt-save-btn, .amt-ui-lang-btn { min-height: 44px; }
+          .amt-upload-btn, .amt-example-btn, .amt-analyze-btn, .amt-privacy-confirm-btn, .amt-save-btn, .amt-lang-btn { min-height: 44px; }
           .amt-photo-remove { width: 36px; height: 36px; }
-          .amt-textarea, .amt-lang-native { font-size: 16px; }
+          .amt-textarea { font-size: 16px; }
           .amt-privacy-header { min-height: 48px; }
         }
 
@@ -832,10 +871,15 @@ export default function AmtEasy() {
           .amt-about { padding: 0 20px 60px; }
           .amt-privacy-wrap { padding: 0 20px 12px; }
           .amt-main { padding: 0 20px 12px; }
+          .amt-picker { padding: 32px 20px 60px; }
+          .amt-picker-grid { grid-template-columns: 1fr 1fr; }
           .amt-office-grid { grid-template-columns: 1fr; }
           .amt-controls { flex-direction: column; align-items: stretch; }
           .amt-analyze-btn { width: 100%; }
         }
+
+        html[dir="rtl"] *, html[lang="hi"] *, html[lang="am"] *, html[lang="ti"] * { letter-spacing: 0 !important; }
+        html[dir="rtl"] .amt-section-title, html[dir="rtl"] .amt-card-label, html[dir="rtl"] .amt-eyebrow { font-size: 13px; }
 
         @media (prefers-contrast: more) {
           .amt-subtitle, .amt-about-text, .amt-privacy-body p, .amt-summary, .amt-deadline-desc, .amt-checklist-item { color: #e8dcc8; }
@@ -856,7 +900,7 @@ export default function AmtEasy() {
           @page { margin: 18mm 16mm; }
           html, body, .amt-root { background: #fff !important; color: #1e2a28 !important; }
           .amt-header, .amt-hero, .amt-about, .amt-privacy-wrap, .amt-input-card,
-          .amt-save-btn, .amt-sr-only, .amt-loading-card, .amt-error-card { display: none !important; }
+          .amt-save-btn, .amt-sr-only, .amt-loading-card, .amt-error-card, .amt-picker { display: none !important; }
           .amt-main { max-width: none; padding: 0; }
           .amt-print-only { display: block; }
           .amt-print-head { display: flex; justify-content: space-between; align-items: baseline; border-bottom: 2px solid #1e2a28; padding-bottom: 8px; margin-bottom: 18px; }
@@ -890,57 +934,45 @@ export default function AmtEasy() {
           <span className="amt-logo-text">Amt-Easy</span>
           <span className="amt-logo-dot" />
         </div>
-        <div className="amt-header-right">
-          <span className="amt-header-tag">{t.headerTag}</span>
-          <div className="amt-ui-lang" role="group" aria-label={t.switchLabel}>
-            {[["en", "EN", "English"], ["de", "DE", "Deutsch"]].map(([code, short, name]) => (
-              <button
-                key={code}
-                type="button"
-                lang={code}
-                className={"amt-ui-lang-btn" + (uiLang === code ? " active" : "")}
-                aria-pressed={uiLang === code}
-                aria-label={name}
-                onClick={() => setUiLang(code)}
-              >
-                {short}
-              </button>
-            ))}
+        {language && !pickerOpen && (
+          <div className="amt-header-right">
+            <span className="amt-header-tag">{t.headerTag}</span>
+            <button type="button" className="amt-lang-btn" aria-label={t.changeLanguage + ": " + lang.label} onClick={() => { setPickerOpen(true); window.scrollTo(0, 0); }}>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+                <circle cx="12" cy="12" r="10" />
+                <path d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z" />
+              </svg>
+              <span lang={lang.tag}>{lang.label}</span>
+            </button>
           </div>
-        </div>
+        )}
       </header>
 
+      {(!language || pickerOpen) ? (
+        <LanguagePicker
+          current={language}
+          suggested={suggestedLanguage()}
+          onChoose={chooseLanguage}
+          onClose={language ? () => setPickerOpen(false) : null}
+        />
+      ) : (
+      <>
       {/* Hero */}
       <div className="amt-hero">
         <p className="amt-eyebrow">{t.eyebrow}</p>
-        <h1 className="amt-title">{t.titleA}<br /><em lang="de">{t.titleB}</em></h1>
+        <h1 className="amt-title">{t.titleA}<br /><em lang="de" dir="ltr">Beamtendeutsch.</em></h1>
         <p className="amt-subtitle">{t.subtitle}</p>
       </div>
 
       {/* Main */}
       <main className="amt-main">
         <div className="amt-card amt-input-card">
-          <div className="amt-lang-row">
-            <label className="amt-lang-label" htmlFor="amt-lang">{t.explainIn}</label>
-            <div className="amt-lang-select">
-              <select
-                id="amt-lang"
-                className="amt-lang-native"
-                value={language}
-                onChange={(e) => setLanguage(e.target.value)}
-              >
-                {LANGUAGES.map((lang) => (
-                  <option key={lang.code} value={lang.code} lang={lang.tag}>{lang.label}</option>
-                ))}
-              </select>
-              <span className="amt-lang-chevron" aria-hidden="true">&#9660;</span>
-            </div>
-          </div>
           <label className="amt-card-label" htmlFor="amt-doc-text">{t.pasteLabel}</label>
           <textarea
             id="amt-doc-text"
             className="amt-textarea"
             lang="de"
+            dir="ltr"
             placeholder={t.placeholder}
             value={input}
             aria-describedby="amt-char-count"
@@ -951,7 +983,9 @@ export default function AmtEasy() {
             style={{ borderColor: overLimit ? "rgba(224,128,106,0.7)" : undefined }}
           />
           <p id="amt-char-count" className="amt-char-count" style={{ color: overLimit ? "#e0806a" : charsLeft < 500 ? "#d4a86a" : "#93a397" }}>
-            {overLimit ? t.charsOver(Math.abs(charsLeft)) : t.charsRemaining(charsLeft)}
+            {overLimit
+              ? fmt(t.charsOver, { n: Math.abs(charsLeft).toLocaleString(lang.tag) })
+              : fmt(t.charsRemaining, { n: charsLeft.toLocaleString(lang.tag) })}
           </p>
 
           <div className="amt-upload-row">
@@ -982,13 +1016,13 @@ export default function AmtEasy() {
 
           {photos.length > 0 && (
             <div className="amt-photos">
-              <p className="amt-photos-label">{t.photosLabel(photos.length, MAX_PHOTOS)}</p>
+              <p className="amt-photos-label">{fmt(t.photosLabel, { n: photos.length, max: MAX_PHOTOS })}</p>
               <ul className="amt-photo-list">
                 {photos.map((p, i) => (
                   <li key={i} className="amt-photo">
-                    <img src={p.preview} alt={t.photoAlt(i + 1)} />
+                    <img src={p.preview} alt={fmt(t.photoAlt, { n: i + 1 })} />
                     <span className="amt-photo-num" aria-hidden="true">{i + 1}</span>
-                    <button type="button" className="amt-photo-remove" aria-label={t.removePhoto(i + 1)} onClick={() => removePhoto(i)}>&#10005;</button>
+                    <button type="button" className="amt-photo-remove" aria-label={fmt(t.removePhoto, { n: i + 1 })} onClick={() => removePhoto(i)}>&#10005;</button>
                   </li>
                 ))}
               </ul>
@@ -1045,8 +1079,8 @@ export default function AmtEasy() {
 
         {result && !loading && (
           <div className="amt-card amt-result" lang={resultLang.tag} dir={resultLang.rtl ? "rtl" : "ltr"}>
-            <div className="amt-print-only amt-print-head" lang={uiLang} dir="ltr">
-              <span className="amt-print-brand">Amt-Easy<span>.</span></span>
+            <div className="amt-print-only amt-print-head">
+              <span className="amt-print-brand" dir="ltr">Amt-Easy<span>.</span></span>
               <span className="amt-print-date">{new Date().toLocaleDateString(resultLang.tag, { day: "2-digit", month: "long", year: "numeric" })}</span>
             </div>
             <div className="amt-result-header">
@@ -1057,11 +1091,9 @@ export default function AmtEasy() {
                 </span>
               )}
             </div>
-            <p className="amt-disclaimer-top" lang={uiLang} dir="ltr">{t.disclaimerTop}</p>
-            {resultFromPhoto && <p className="amt-unstructured-note" lang={uiLang} dir="ltr">{t.photoNote}</p>}
-            {result.unstructured && (
-              <p className="amt-unstructured-note" lang={uiLang} dir="ltr">{t.unstructuredNote}</p>
-            )}
+            <p className="amt-disclaimer-top">{t.disclaimerTop}</p>
+            {resultFromPhoto && <p className="amt-unstructured-note">{t.photoNote}</p>}
+            {result.unstructured && <p className="amt-unstructured-note">{t.unstructuredNote}</p>}
             {(result.summary || result.unstructured) && <p className="amt-summary">{result.summary || t.parseFail}</p>}
             {result.deadlines?.length > 0 && (
               <div className="amt-section">
@@ -1108,22 +1140,22 @@ export default function AmtEasy() {
                 ))}
               </div>
             )}
-            <div className="amt-section amt-help" lang={uiLang} dir="ltr">
+            <div className="amt-section amt-help">
               <h3 className="amt-section-title">{t.helpTitle}</h3>
               <ul className="amt-help-list">
                 {t.help.map((item, i) => (
                   <li key={i} className="amt-help-item">
                     <span>{rich(item.text)}</span>
-                    {item.link && (
-                      <a className="amt-help-link" href={item.link} target="_blank" rel="noopener noreferrer">
-                        {item.linkLabel}<span className="amt-sr-only"> {t.newTab}</span><span className="amt-print-only"> ({item.link})</span>
+                    {HELP_LINKS.at(i) && (
+                      <a className="amt-help-link" href={HELP_LINKS.at(i)} target="_blank" rel="noopener noreferrer">
+                        {item.linkLabel}<span className="amt-sr-only"> {t.newTab}</span><span className="amt-print-only" dir="ltr"> ({HELP_LINKS.at(i)})</span>
                       </a>
                     )}
                   </li>
                 ))}
               </ul>
             </div>
-            <p className="amt-print-only amt-print-foot" lang={uiLang} dir="ltr">{t.printFoot}</p>
+            <p className="amt-print-only amt-print-foot">{t.printFoot}</p>
             <button type="button" className="amt-save-btn" onClick={() => window.print()}>
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
                 <path d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4" />
@@ -1157,7 +1189,10 @@ export default function AmtEasy() {
           </button>
           {privacyOpen && (
             <div className="amt-privacy-body" id="amt-privacy-body">
-              {t.privacy.map((para, i) => <p key={i}>{rich(para)}</p>)}
+              {isTranslated && <LegalToggle t={t} showGerman={showGermanLegal} onToggle={() => setShowGermanLegal(!showGermanLegal)} />}
+              <div lang={showGermanLegal ? "de" : lang.tag} dir={showGermanLegal ? "ltr" : undefined}>
+                {legal.privacy.map((para, i) => <p key={i}>{rich(para)}</p>)}
+              </div>
               {!privacyConfirmed ? (
                 <div className="amt-privacy-confirm">
                   <span className="amt-privacy-confirm-text">{t.privacyConfirmText}</span>
@@ -1182,11 +1217,62 @@ export default function AmtEasy() {
           <h2 className="amt-about-title">{t.aboutTitle}</h2>
           <p className="amt-about-text">{t.aboutP1}</p>
           <p className="amt-about-text">{t.aboutP2}</p>
-          <p className="amt-about-legal">{t.aboutLegal}</p>
+          <div className="amt-about-legal">
+            {isTranslated && <LegalToggle t={t} showGerman={showGermanLegal} onToggle={() => setShowGermanLegal(!showGermanLegal)} />}
+            <p lang={showGermanLegal ? "de" : lang.tag} dir={showGermanLegal ? "ltr" : undefined}>{legal.aboutLegal}</p>
+          </div>
         </div>
       </div>
+      </>
+      )}
 
     </div>
+  );
+}
+
+function LegalToggle({ t, showGerman, onToggle }) {
+  return (
+    <p className="amt-legal-toggle">
+      <span>{t.autoTranslated}</span>{" "}
+      <button type="button" className="amt-link-btn" onClick={onToggle}>
+        {showGerman ? t.showTranslation : t.showGerman}
+      </button>
+    </p>
+  );
+}
+
+function LanguagePicker({ current, suggested, onChoose, onClose }) {
+  const headingRef = useRef(null);
+  useEffect(() => { headingRef.current?.focus({ preventScroll: true }); }, []);
+  const first = suggested && suggested !== current ? LANGUAGES.filter((l) => l.code === suggested) : [];
+  const rest = LANGUAGES.filter((l) => !first.includes(l));
+  return (
+    <main className="amt-picker">
+      <h1 className="amt-picker-title" ref={headingRef} tabIndex={-1}>
+        Choose your language
+      </h1>
+      <p className="amt-picker-sub">
+        <span lang="de">Sprache wählen</span> · <span lang="ar" dir="rtl">اختر لغتك</span> · <span lang="fa-AF" dir="rtl">زبان خود را انتخاب کنید</span> · <span lang="tr">Dilinizi seçin</span> · <span lang="uk">Оберіть мову</span>
+      </p>
+      <ul className="amt-picker-grid">
+        {[...first, ...rest].map((l) => (
+          <li key={l.code}>
+            <button
+              type="button"
+              className={"amt-picker-btn" + (l.code === current ? " current" : "") + (first.includes(l) ? " suggested" : "")}
+              aria-current={l.code === current ? "true" : undefined}
+              onClick={() => onChoose(l.code)}
+            >
+              <span className="amt-picker-native" lang={l.tag} dir={l.rtl ? "rtl" : "ltr"}>{l.label}</span>
+              <span className="amt-picker-en" lang="en">{l.code}</span>
+            </button>
+          </li>
+        ))}
+      </ul>
+      {onClose && (
+        <button type="button" className="amt-picker-close" onClick={onClose}><span className="amt-picker-back" aria-hidden="true">&#8592;</span> Amt-Easy</button>
+      )}
+    </main>
   );
 }
 

@@ -12,34 +12,25 @@ const PHOTO_TYPES = ["image/jpeg", "image/png", "image/webp"];
 
 const LANGUAGES = [
   "English", "German", "Arabic", "Turkish", "Ukrainian", "Russian", "Romanian",
-  "Polish", "French", "Spanish", "Italian", "Portuguese", "Persian",
+  "Polish", "French", "Spanish", "Italian", "Portuguese", "Persian", "Dari", "Pashto",
   "Kurdish (Kurmanji)", "Serbian", "Croatian", "Bosnian", "Bulgarian", "Greek",
   "Vietnamese", "Hindi", "Somali", "Amharic", "Tigrinya", "Swedish",
 ];
 
-// Must match DEFAULT_LABELS in src/App.jsx.
-const LABELS = {
-  deadlines: "Deadlines",
-  actions: "What you need to do",
-  documents: "Documents to bring",
-  appointment: "Appointment details",
-  office: "Office",
-  address: "Address",
-  room: "Room",
-  time: "Time",
-  numbers: "Important reference numbers",
-  urgency_high: "Urgent",
-  urgency_medium: "Moderate",
-  urgency_low: "Low priority",
-  no_date: "No date",
-  save_pdf: "Save as PDF",
+// How each language is named to the model, where the plain name is ambiguous.
+const PROMPT_NAMES = {
+  Dari: "Dari (Afghan Persian, as written in Afghanistan)",
+  Pashto: "Pashto",
+  Serbian: "Serbian (Cyrillic script)",
+  "Kurdish (Kurmanji)": "Kurdish (Kurmanji, Latin script)",
 };
 
-function buildPrompt(text, language, photoCount) {
+function buildPrompt(text, languageCode, photoCount) {
+  const language = PROMPT_NAMES[languageCode] || languageCode;
   const source = photoCount
     ? "The German document is shown in the attached photo" + (photoCount > 1 ? "s (" + photoCount + " pages, in order)" : "") + ". Read the German text from the photo" + (photoCount > 1 ? "s" : "") + " carefully; if any part is unreadable, say so in the summary instead of guessing." + (text.trim() ? " The user also added this text:\n" + text : "")
     : "German document:\n" + text;
-  return "You are Amt-Easy, a specialist in translating German bureaucratic documents into plain, clear language for international residents.\n\nAnalyze the following German document or text and respond ONLY in valid JSON with this exact structure:\n{\n  \"summary\": \"2-3 sentence plain language summary\",\n  \"document_type\": \"Type of document\",\n  \"urgency\": \"low | medium | high\",\n  \"deadlines\": [{\"date\": \"date string or null\", \"description\": \"what must be done\"}],\n  \"action_items\": [\"specific action\"],\n  \"documents_to_bring\": [\"document or item\"],\n  \"important_numbers\": [{\"label\": \"what this number is (e.g. IBAN, file number, phone, tax ID, case number)\", \"value\": \"the number\"}],\n  \"office_info\": {\"name\": \"office name or null\", \"address\": \"address or null\", \"room\": \"room number or null\", \"time\": \"appointment time or null\"},\n  \"labels\": " + JSON.stringify(LABELS) + "\n}\n\nIMPORTANT: For important_numbers, extract ALL reference numbers, IBANs, tax IDs, phone numbers, file numbers, and case numbers mentioned in the document. Do not skip any numbers.\n\nThe \"urgency\" value must stay exactly one of: low, medium, high (in English). The \"labels\" object contains short interface headings: keep its keys, and translate each value into " + language + ".\n\nRespond in " + language + ". All other values in the JSON must be in " + language + " except JSON keys. If a section has no relevant data, use [] or null. No text outside the JSON.\n\n" + source;
+  return "You are Amt-Easy, a specialist in translating German bureaucratic documents into plain, clear language for international residents.\n\nAnalyze the following German document or text and respond ONLY in valid JSON with this exact structure:\n{\n  \"summary\": \"2-3 sentence plain language summary\",\n  \"document_type\": \"Type of document\",\n  \"urgency\": \"low | medium | high\",\n  \"deadlines\": [{\"date\": \"date string or null\", \"description\": \"what must be done\"}],\n  \"action_items\": [\"specific action\"],\n  \"documents_to_bring\": [\"document or item\"],\n  \"important_numbers\": [{\"label\": \"what this number is (e.g. IBAN, file number, phone, tax ID, case number)\", \"value\": \"the number\"}],\n  \"office_info\": {\"name\": \"office name or null\", \"address\": \"address or null\", \"room\": \"room number or null\", \"time\": \"appointment time or null\"}\n}\n\nIMPORTANT: For important_numbers, extract ALL reference numbers, IBANs, tax IDs, phone numbers, file numbers, and case numbers mentioned in the document. Do not skip any numbers.\n\nThe \"urgency\" value must stay exactly one of: low, medium, high (in English).\n\nRespond in " + language + ". All other values in the JSON must be in " + language + " except JSON keys. If a section has no relevant data, use [] or null. No text outside the JSON.\n\n" + source;
 }
 
 export default async function handler(req, res) {
